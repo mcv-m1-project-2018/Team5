@@ -7,8 +7,8 @@ import numpy as np
 import shutil
 import time
 
-from traffic_signs.evaluation.evaluation_funcs import performance_evaluation_pixel
-from traffic_signs.utils import get_img, rgb2hsv, threshold_image, save_image, get_files_from_dir, confusion_matrix, \
+from evaluation.evaluation_funcs import performance_evaluation_pixel
+from utils import get_img, rgb2hsv, threshold_image, save_image, get_files_from_dir, confusion_matrix, \
     print_confusion_matrix, print_metrics
 
 # Logger setup
@@ -64,8 +64,8 @@ for img_dir in test_images:
 
     # Get the mask of the HSV image
     mask = threshold_image(img_hsv, ths_h, channel=0)
-    mask += threshold_image(img_hsv, ths_s, channel=1)
-    mask += threshold_image(img_hsv, ths_v, channel=2)
+    #mask += threshold_image(img_hsv, ths_s, channel=1)
+    #mask += threshold_image(img_hsv, ths_v, channel=2)
 
     # Create a numpy array where mask values are 255
     final = mask.astype(np.uint8)
