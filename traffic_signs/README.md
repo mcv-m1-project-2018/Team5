@@ -1,6 +1,6 @@
 # Traffic Sign Detection
 
-Tasks 1,2 and the thresholds selection done in the jupyter notebook `traffic_signs/task1.ipynb`
+Tasks 1, 2 and the thresholds selection done in the jupyter notebook `traffic_signs/task1.ipynb`
 
 Tasks 3 and 4 done in `traffic_signs/main.py`
  
