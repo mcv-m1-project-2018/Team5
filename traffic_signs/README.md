@@ -1,5 +1,11 @@
 # Traffic Sign Detection
 
+Tasks 1,2 and the thresholds selection done in the jupyter notebook `traffic_signs/task1.ipynb`
+
+Tasks 3 and 4 done in `traffic_signs/main.py`
+ 
+## Global
+ 
 Use the `traffic_signs/main.py` file to obtain the traffic sign masks of a set of images.
 
 After running the script, result masks will be saved into a directory and performance metrics will be 
