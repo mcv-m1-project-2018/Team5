@@ -38,8 +38,8 @@ if os.path.exists(RESULT_DIR):
 os.makedirs(RESULT_DIR)
 
 # Get list of test images in test directory
-test_images = get_files_from_dir(TRAIN_DIR)
-# test_images = os.listdir(TEST_DIR)
+# test_images = get_files_from_dir(TRAIN_DIR)
+test_images = os.listdir(TEST_DIR)
 
 # Set threshold based on ranges of interest
 ths_h = np.array([
@@ -58,7 +58,7 @@ t_frame = 0
 for img_dir in test_images:
     t_frame_0 = time.time()
     # Get numpy array of the image and convert it to HSV
-    img = get_img(TRAIN_DIR, img_dir)
+    img = get_img(TEST_DIR, img_dir)
     img_hsv = rgb2hsv(img)
     # img_hsv = ndimage.filters.gaussian_filter(img_hsv, sigma=3)
 
@@ -80,8 +80,8 @@ logger.info(
     "%d masks saved in %.3fs (%.3fs per frame)" % (len(test_images), time.time() - t0, t_frame / len(test_images))
 )
 
-conf_mat = confusion_matrix(RESULT_DIR, TRAIN_MASKS_DIR)
-print_confusion_matrix(conf_mat)
-metrics = performance_evaluation_pixel(*conf_mat)
-print_metrics(metrics)
+# conf_mat = confusion_matrix(RESULT_DIR, TRAIN_MASKS_DIR)
+# print_confusion_matrix(conf_mat)
+# metrics = performance_evaluation_pixel(*conf_mat)
+# print_metrics(metrics)
 
