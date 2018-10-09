@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 # Directory in the root directory where the results will be saved
-RESULT_DIR = os.path.join('m1-results', 'weekX', 'test', 'method1')
+RESULT_DIR = os.path.join('results')
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRAIN_DIR = os.path.join('dataset', 'train')
