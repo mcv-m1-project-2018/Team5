@@ -11,7 +11,7 @@ import glob
 from evaluation.evaluation_funcs import performance_evaluation_pixel
 from utils import get_img, rgb2hsv, threshold_image, save_image, get_files_from_dir, confusion_matrix, \
     print_confusion_matrix, print_metrics
-
+from export_data import export_image_and_mask
 
 # Logger setup
 logging.basicConfig(
@@ -30,12 +30,12 @@ TRAIN_GTS_DIR = os.path.join(TRAIN_DIR, 'gt')
 TRAIN_MASKS_DIR = os.path.join(TRAIN_DIR, 'mask')
 #TEST_DIR = os.path.join('dataset', 'test')
 
-train = False
+train = True
 if train:
-    RESULT_DIR = os.path.join('results', 'train')
+    RESULT_DIR = os.path.join('results', 'masks', 'train')
     IMAGE_DIR = TRAIN_DIR
 else:
-    RESULT_DIR = os.path.join('results', 'test')
+    RESULT_DIR = os.path.join('results', 'masks', 'test')
     IMAGE_DIR = os.path.join('dataset', 'test')
 
 # If the directory already exists, delete it
@@ -89,6 +89,10 @@ for img_dir_temp in glob.glob(IMAGE_DIR + "/*.jpg"):
 logger.info(
     "%d masks saved in %.3fs (%.3fs per frame)" % (len(test_images), time.time() - t0, t_frame / len(test_images))
 )
+
+# Export images + masks results
+# export_image_and_mask(IMAGE_DIR, RESULT_DIR, RESULT_DIR.replace("masks","image+masks"))
+
 
 # conf_mat = confusion_matrix(RESULT_DIR, TRAIN_MASKS_DIR)
 # print_confusion_matrix(conf_mat)
