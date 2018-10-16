@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from skimage import color
+from skimage.transform.integral import integral_image
 
 # Local modules
 from evaluation.evaluation_funcs import performance_accumulation_pixel, performance_evaluation_pixel
@@ -29,16 +30,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_files_from_dir(directory):
+def get_files_from_dir(directory, excl_exts=None):
     """
     Get only files from directory.
 
     :param directory: Directory path
+    :param excl_exts: List with extensions to exclude
     :return: List of files in directory
     """
 
     logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
-    l = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+
+    excl_exts = list() if excl_exts is None else excl_exts
+
+    l = [
+        f for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_exts
+    ]
     logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
 
     return l
@@ -143,6 +151,14 @@ def parse_gt_data(line):
     return vals
 
 
+def int_img(image):
+    return integral_image(image)
+
+
+def sum_over_int_img(int_image, tlx, tly, brx, bry):
+    return int_image[bry, brx] - int_image[tly, brx] - int_image[bry, tlx] + int_image[tly, tlx]
+
+
 def threshold_image(img, ths, channel=0):
     """
     Get the mask of a image for the pixels that are between a set threshold values.
@@ -181,6 +197,11 @@ def save_image(img, directory, name, ext='png'):
     # Get filename without extension and the new one
     filename = '.'.join(name.split('.')[:-1])
     filename = '{name}.{ext}'.format(name=filename, ext=ext)
+
+    if not os.path.exists(directory):
+        logger.debug("{directory} does not exist".format(directory=directory))
+        os.mkdir(directory)
+
     img_path = os.path.join(directory, filename)
 
     logger.debug("Saving image in {path}".format(path=img_path))
