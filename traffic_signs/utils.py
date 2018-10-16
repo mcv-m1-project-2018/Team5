@@ -3,12 +3,13 @@
 # Built-in modules
 import logging
 import os
-
-# 3rd party modules
+import pickle
 import random
 
+# 3rd party modules
 import imageio
 import numpy as np
+import pandas as pd
 
 from skimage import color
 
@@ -245,3 +246,76 @@ def print_metrics(values):
     print('Specificity: %.3f' % values[2])
     print('Sensitivity: %.3f' % values[3])
     print('F1 Score   : %.3f' % (2 * values[0] * values[2] / (values[0] + values[2])))
+
+
+def get_train_data(path_train, path_gt):
+    columns = ['gt_file', 'type', 'width', 'height', 'bbox_area', 'form_factor',
+             'tly', 'tlx', 'bry', 'brx', 'mask_area', 'filling_ratio', 'mask']
+    gts = os.listdir(path_gt)
+
+    l = list()
+    for gt in gts:
+        mask_path = gt_to_mask(gt)
+        mask_img = get_img(path_train, mask_path)
+        # orig_img = get_train_img(gt_to_img(gt))
+
+        for gt_datum in get_gt_data(path_gt, gt):
+            tly, tlx, bry, brx, signal_type = parse_gt_data(gt_datum)
+
+            d = dict()
+
+            w = brx - tlx
+            h = bry - tly
+
+            d['gt_file'] = gt
+            d['type'] = signal_type.strip()
+            d['width'] = w
+            d['height'] = h
+            d['bbox_area'] = w * h
+            d['form_factor'] = w / h
+
+            d['tly'] = round(tly)
+            d['tlx'] = round(tlx)
+            d['bry'] = round(bry)
+            d['brx'] = round(brx)
+
+            mask_patch = get_patch(mask_img, d['tlx'], d['tly'], d['brx'], d['bry'])
+            mask_area = np.count_nonzero(mask_patch)
+            d['mask_area'] = mask_area
+            d['filling_ratio'] = mask_area / d['bbox_area']
+            d['mask'] = mask_patch != 0
+
+            l.append(list(d.values()))
+
+    return pd.DataFrame(l, columns=columns)
+
+
+def split_data_by(data, key=None, train_size=0.7):
+    _keys = list(data.values())[0][0].keys()
+
+    if key is None:
+        keys = list(data.keys())
+        train_sz = round(len(keys) * train_size)
+
+    elif key in _keys:
+        pass
+    else:
+        raise ValueError('"{key}" key not in data'.format(key=key))
+
+
+def split_data_by_type(data, train_size=0.7):
+    unique_data = data.drop_duplicates('gt_file', keep='first')
+
+    print(unique_data)
+    pass
+
+
+def bbox_to_pkl(bboxes, fname, folder=''):
+    if not isinstance(bboxes, list):
+        raise ValueError('bboxes variable must be a list')
+
+    fname = fname if fname.endswith('.pkl') else '{fname}.pkl'.format(fname=fname)
+    path = os.path.join(folder, fname)
+
+    with open(path, 'wb') as f:
+        pickle.dump(bboxes, f)
