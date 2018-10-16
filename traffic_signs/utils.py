@@ -7,6 +7,8 @@ import pickle
 import random
 
 # 3rd party modules
+from functools import reduce
+
 import imageio
 import numpy as np
 import pandas as pd
@@ -340,3 +342,83 @@ def bbox_to_pkl(bboxes, fname, folder=''):
 
     with open(path, 'wb') as f:
         pickle.dump(bboxes, f)
+
+
+def non_max_suppression(bboxes, overlap_thresh):
+    """
+    Malisiewicz et al. method for non-maximum suppression.
+
+    :param bboxes: List with bounding boxes
+    :param overlap_thresh: Overlaping threshold
+    :return: List of merger bounding boxes
+    """
+    # If there are no boxes, return an empty list
+    if len(bboxes) == 0:
+        return []
+
+    # If the bounding boxes integers, convert them to floats
+    # This is important since we'll be doing a bunch of divisions
+    if bboxes.dtype.kind == "i":
+        bboxes = bboxes.astype("float")
+
+    # Initialize the list of picked indexes
+    pick = []
+
+    # Grab the coordinates of the bounding boxes
+    x1 = bboxes[:, 0]
+    y1 = bboxes[:, 1]
+    x2 = bboxes[:, 2]
+    y2 = bboxes[:, 3]
+
+    # Compute the area of the bounding boxes and sort the bounding
+    # boxes by the bottom-right y-coordinate of the bounding box
+    area = (x2 - x1 + 1) * (y2 - y1 + 1)
+    idxs = np.argsort(y2)
+
+    # Keep looping while some indexes still remain in the indexes
+    # list
+    while 0 < len(idxs):
+        # Grab the last index in the indexes list and add the
+        # index value to the list of picked indexes
+        last = len(idxs) - 1
+        i = idxs[last]
+        pick.append(i)
+
+        # Find the largest (x, y) coordinates for the start of
+        # the bounding box and the smallest (x, y) coordinates
+        # for the end of the bounding box
+        xx1 = np.maximum(x1[i], x1[idxs[:last]])
+        yy1 = np.maximum(y1[i], y1[idxs[:last]])
+        xx2 = np.minimum(x2[i], x2[idxs[:last]])
+        yy2 = np.minimum(y2[i], y2[idxs[:last]])
+
+        # Compute the width and height of the bounding box
+        w = np.maximum(0, xx2 - xx1 + 1)
+        h = np.maximum(0, yy2 - yy1 + 1)
+
+        # Compute the ratio of overlap
+        overlap = (w * h) / area[idxs[:last]]
+
+        # Delete all indexes from the index list that have
+        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap_thresh < overlap)[0])))
+
+    # Return only the bounding boxes that were picked using the integer data type
+    return bboxes[pick].astype("int")
+
+
+def bboxes_to_file(bboxes, fname, directory, sign_types=None):
+    if sign_types is not None and len(bboxes) != len(sign_types):
+        raise ValueError('bboxes and sign_types have different sizes')
+
+    if not os.path.exists(directory):
+        os.mkdir(directory)
+
+    fpath = os.path.join(directory, fname)
+    with open(fpath, 'w+') as f:
+        for idx, bbox in enumerate(bboxes):
+            f.write('{tlx} {tly} {brx} {bry} '.format(tlx=bbox[0], tly=bbox[1], brx=bbox[2], bry=bbox[3]))
+            f.write('{signal_type}\n'.format(signal_type=sign_types[idx] if sign_types is not None else ''))
+
+
+def merge_masks(masks):
+    return 1 * reduce(np.bitwise_or, masks)

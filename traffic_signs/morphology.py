@@ -2,7 +2,6 @@
 
 import logging
 import os
-from functools import reduce
 
 import matplotlib.pylab as plt
 import numpy as np
@@ -14,7 +13,7 @@ from skimage.morphology import binary_erosion, disk, opening
 from skimage.restoration import denoise_tv_chambolle
 
 # Directory in the root directory where the results will be saved
-from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, get_patch, rgb2hsv, save_image
+from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +49,7 @@ H_RED_MIN = 0.57
 H_RED_MAX = 0.63
 H_BLUE_MIN = 0.93
 H_BLUE_MAX = 0.07
+NON_MAX_SUP_TH = 0.5
 
 
 # Logger setup
@@ -98,6 +98,9 @@ if __name__ == '__main__':
             np.logical_or(H_BLUE_MIN < h, h < H_BLUE_MAX)
         ]
 
+        # Create list for bboxes
+        bboxes = list()
+
         if F_MORPH:
             # kernel = disk(3)
             kernel = np.ones((3, 3))
@@ -135,22 +138,37 @@ if __name__ == '__main__':
             masks = morp_masks
 
         if F_CONN_COMP:
-            pass
+            for mask in masks:
+                pass
+
+            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_SLID_WIND:
-            pass
+            for mask in masks:
+                pass
+
+            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_TEMP_MATCH:
-            pass
+            for mask in masks:
+                pass
+
+            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_SLID_WIND_W_INT_IMG:
-            pass
+            for mask in masks:
+                pass
+
+            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_CONV:
-            pass
+            for mask in masks:
+                pass
+
+            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         # Final mask
-        mask = 1 * reduce(np.bitwise_or, masks)
+        mask = merge_masks(masks)
 
         fname = gt_to_mask(d['gt_file'])
         save_image(mask, METHOD_DIR, fname)
