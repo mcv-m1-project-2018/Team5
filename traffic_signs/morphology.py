@@ -17,8 +17,8 @@ from skimage.restoration import denoise_tv_chambolle
 from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, get_patch, rgb2hsv, save_image
 
 # Useful directories
-RESULT_DIR = os.path.join('results')
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+RESULT_DIR = os.path.join('results')
 TRAIN_DIR = os.path.join('dataset', 'train')
 TRAIN_GTS_DIR = os.path.join(TRAIN_DIR, 'gt')
 TRAIN_MASKS_DIR = os.path.join(TRAIN_DIR, 'mask')
@@ -31,21 +31,28 @@ PICKLE_DATASET = 'train_data.pkl'
 METHOD_NUMBER = 1
 METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMBER))
 
+
 # Flags
-DENOISE = False
-EQUALIZE_HIST = False
-MORPHOLOGY = True
-FILL_HOLES = False
-CONNECTED_COMPONENTS = False
-SLIDING_WINDOW = False
-TEMPLATE_MATCHING = False
-SLIDING_WINDOW_WITH_INTEGRAL_IMAGES = False
-CONVOLUTIONS = False
-PLOT = False
+F_DENOISE = False
+F_EQ_HIST = False
+F_MORPH = True
+F_FILL_HOLES = False
+F_CONN_COMP = False
+F_SLID_WIND = False
+F_TEMP_MATCH = False
+F_SLID_WIND_W_INT_IMG = False
+F_CONV = False
+F_PLOT = True
+
+
+# Global variables
+H_RED_MIN = 0.57
+H_RED_MAX = 0.63
+H_BLUE_MIN = 0.93
+H_BLUE_MAX = 0.07
 
 
 # Logger setup
-
 logging.basicConfig(
     # level=logging.DEBUG,
     level=logging.INFO,
@@ -66,11 +73,11 @@ if __name__ == '__main__':
         orig_img = get_img(TRAIN_DIR, gt_to_img(d['gt_file']))
 
         # If denoise chambolle flag is set
-        if DENOISE:
+        if F_DENOISE:
             orig_img = denoise_tv_chambolle(orig_img, weight=0.2, multichannel=True)
 
         # If histogram equalization flag is set
-        if EQUALIZE_HIST:
+        if F_EQ_HIST:
             orig_img = equalize_hist(orig_img)
 
         # Get traffic signal patch
@@ -87,11 +94,11 @@ if __name__ == '__main__':
 
         # Create masks based on color segmentation
         masks = [
-            np.logical_and(h < 0.07, h < 0.93),
-            np.logical_and(0.57 < h, h < 0.63)
+            np.logical_and(H_RED_MIN < h, h < H_RED_MAX),
+            np.logical_or(H_BLUE_MIN < h, h < H_BLUE_MAX)
         ]
 
-        if MORPHOLOGY:
+        if F_MORPH:
             # kernel = disk(3)
             kernel = np.ones((3, 3))
 
@@ -100,7 +107,7 @@ if __name__ == '__main__':
                 binary_fill_holes(opening(masks[1], kernel))
             ]
 
-            if PLOT:
+            if F_PLOT:
                 plt.figure()
                 plt.subplot(231)
                 plt.imshow(orig_img)
@@ -127,19 +134,19 @@ if __name__ == '__main__':
 
             masks = morp_masks
 
-        if CONNECTED_COMPONENTS:
+        if F_CONN_COMP:
             pass
 
-        if SLIDING_WINDOW:
+        if F_SLID_WIND:
             pass
 
-        if TEMPLATE_MATCHING:
+        if F_TEMP_MATCH:
             pass
 
-        if SLIDING_WINDOW_WITH_INTEGRAL_IMAGES:
+        if F_SLID_WIND_W_INT_IMG:
             pass
 
-        if CONVOLUTIONS:
+        if F_CONV:
             pass
 
         # Final mask
