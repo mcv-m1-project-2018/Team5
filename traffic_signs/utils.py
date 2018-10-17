@@ -354,6 +354,9 @@ def non_max_suppression(bboxes, overlap_thresh):
     :param overlap_thresh: Overlaping threshold
     :return: List of merger bounding boxes
     """
+
+    bboxes = np.array(bboxes)
+
     # If there are no boxes, return an empty list
     if len(bboxes) == 0:
         return []

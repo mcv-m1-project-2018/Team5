@@ -16,9 +16,8 @@ from skimage.morphology import binary_erosion, disk, opening
 from skimage.restoration import denoise_tv_chambolle
 from skimage.measure import label, regionprops
 
+import utils
 
-# Directory in the root directory where the results will be saved
-from utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks, connected_components, get_files_from_dir, bboxes_to_file
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -66,7 +65,7 @@ FR_MIN = 0.5
 
 # Geometrical filter features:
 PLOT_BBOX = False
-SAVE_BBOX_TXT = True
+F_SAVE_BBOX_TXT = True
 
 
 # Logger setup
@@ -84,10 +83,11 @@ if __name__ == '__main__':
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
         # Get mask path
-        mask_path = gt_to_mask(d['gt_file'])
+        mask_path = utils.gt_to_mask(d['gt_file'])
+        raw_name = d['gt_file'].replace('gt.', '').replace('.txt', '')
 
         # Get original image
-        orig_img = get_img(TRAIN_DIR, gt_to_img(d['gt_file']))
+        orig_img = utils.get_img(TRAIN_DIR, utils.gt_to_img(d['gt_file']))
 
         # If denoise chambolle flag is set
         if F_DENOISE:
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         # patch_hsv = rgb2hsv(orig_traf_sign)
 
         # Convert image to HSV color space
-        orig_img_hsv = rgb2hsv(orig_img)
+        orig_img_hsv = utils.rgb2hsv(orig_img)
 
         # Get Hue channel
         h = orig_img_hsv[..., 0]
@@ -156,46 +156,43 @@ if __name__ == '__main__':
             print('morp_mask')
 
         if F_CONN_COMP:
-
-            bboxes_per_frame = []
-
             for mask in masks:
-                bboxes_mask = connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
-                bboxes_per_frame.append(bboxes_mask)
+                bboxes.extend(
+                    utils.connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
+                )
 
-            bboxes_non_repeat = non_max_suppression(bboxes_per_frame, NON_MAX_SUP_TH)
+            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
-            if SAVE_BBOX_TXT:
-                bboxes_to_file(bboxes_non_repeat, 'prueba.txt', RESULT_DIR, sign_types=None)
-
+            if F_SAVE_BBOX_TXT:
+                utils.bboxes_to_file(bboxes, 'cc.%s.txt' % raw_name, RESULT_DIR, sign_types=None)
 
         if F_SLID_WIND:
             for mask in masks:
                 pass
 
-            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_TEMP_MATCH:
             for mask in masks:
                 pass
 
-            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_SLID_WIND_W_INT_IMG:
             for mask in masks:
                 pass
 
-            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_CONV:
             for mask in masks:
                 pass
 
-            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         # Final mask
-        mask = merge_masks(masks)
+        mask = utils.merge_masks(masks)
 
-        fname = gt_to_mask(d['gt_file'])
-        save_image(mask, METHOD_DIR, fname)
+        fname = utils.gt_to_mask(d['gt_file'])
+        utils.save_image(mask, METHOD_DIR, fname)
         logger.info('{fname} mask saved in {directory}'.format(fname=fname, directory=METHOD_DIR))
