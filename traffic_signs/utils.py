@@ -422,3 +422,66 @@ def bboxes_to_file(bboxes, fname, directory, sign_types=None):
 
 def merge_masks(masks):
     return 1 * reduce(np.bitwise_or, masks)
+
+
+def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_max=None, fr_min=None, plot=False):
+
+    """
+    :param mask0: Incoming masz (2D array)
+    :param area_min: Min area allowed for bbox
+    :param area_max: Max area allowed for bbox
+    :param ff_min: Min form factor allowed for bbox
+    :param ff_max: Max form factor allowed for bbox
+    :param fr_min: Min filling ratio allowed for bbox
+    :param plot: If 'true' plots mask + selected bboxes
+    """
+
+    label_image = label(mask0)
+    bbox_list = []
+
+    if plot == True:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(mask0)
+
+    for region in regionprops(label_image):
+
+        minr, minc, maxr, maxc = region.bbox
+        h = maxr - minr
+        w = maxc - minc
+        form_factor = w / h
+        filling_ratio = region.filled_area / region.bbox_area
+
+        # Filter by area:
+        if area_min is not None and area_max is not None:
+            if area_min <= region.bbox_area <= area_max:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        # Filter by form factor:
+        if ff_min is not None and ff_max is not None:
+            if ff_min < form_factor < ff_max:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        # Filter by filling ratio:
+        if fr_min is not None:
+            if filling_ratio > fr_min:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        bbox_list.append([minr, minc, maxr, maxc])
+
+        if plot == True:
+            rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
+                                      fill=False, edgecolor='red', linewidth=2)
+            ax.add_patch(rect)
+
+    return bbox_list
+
+

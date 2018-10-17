@@ -6,14 +6,19 @@ import os
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
+import imageio
+import matplotlib.patches as mpatches
+
 
 from scipy.ndimage.morphology import binary_fill_holes
 from skimage.exposure import equalize_hist
 from skimage.morphology import binary_erosion, disk, opening
 from skimage.restoration import denoise_tv_chambolle
+from skimage.measure import label, regionprops
+
 
 # Directory in the root directory where the results will be saved
-from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks
+from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks, connected_components, get_files_from_dir, bboxes_to_file
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +41,7 @@ F_DENOISE = False
 F_EQ_HIST = False
 F_MORPH = True
 F_FILL_HOLES = False
-F_CONN_COMP = False
+F_CONN_COMP = True
 F_SLID_WIND = False
 F_TEMP_MATCH = False
 F_SLID_WIND_W_INT_IMG = False
@@ -50,6 +55,18 @@ H_RED_MAX = 0.63
 H_BLUE_MIN = 0.93
 H_BLUE_MAX = 0.07
 NON_MAX_SUP_TH = 0.5
+
+# Geometrical filter variables (if 'None' that filter won't be applied):
+
+AREA_MIN = 1000
+AREA_MAX =  50000
+FF_MIN = 0.5
+FF_MAX = 2
+FR_MIN = 0.5
+
+# Geometrical filter features:
+PLOT_BBOX = False
+SAVE_BBOX_TXT = True
 
 
 # Logger setup
@@ -136,12 +153,21 @@ if __name__ == '__main__':
                 plt.show()
 
             masks = morp_masks
+            print('morp_mask')
 
         if F_CONN_COMP:
-            for mask in masks:
-                pass
 
-            bboxes = non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes_per_frame = []
+
+            for mask in masks:
+                bboxes_mask = connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
+                bboxes_per_frame.append(bboxes_mask)
+
+            bboxes_non_repeat = non_max_suppression(bboxes_per_frame, NON_MAX_SUP_TH)
+
+            if SAVE_BBOX_TXT == True:
+                bboxes_to_file(bboxes_non_repeat, 'prueba.txt', RESULT_DIR, sign_types=None)
+
 
         if F_SLID_WIND:
             for mask in masks:
