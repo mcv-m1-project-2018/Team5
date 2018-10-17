@@ -18,7 +18,7 @@ from skimage.measure import label, regionprops
 
 
 # Directory in the root directory where the results will be saved
-from traffic_signs.utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks, connected_components, get_files_from_dir, bboxes_to_file
+from utils import gt_to_mask, get_img, gt_to_img, rgb2hsv, save_image, non_max_suppression, merge_masks, connected_components, get_files_from_dir, bboxes_to_file
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
             bboxes_non_repeat = non_max_suppression(bboxes_per_frame, NON_MAX_SUP_TH)
 
-            if SAVE_BBOX_TXT == True:
+            if SAVE_BBOX_TXT:
                 bboxes_to_file(bboxes_non_repeat, 'prueba.txt', RESULT_DIR, sign_types=None)
 
 

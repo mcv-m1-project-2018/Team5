@@ -10,10 +10,12 @@ import random
 from functools import reduce
 
 import imageio
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 
 from skimage import color
+from skimage.measure import label, regionprops
 from skimage.transform.integral import integral_image
 
 # Local modules
@@ -435,6 +437,7 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
     :param fr_min: Min filling ratio allowed for bbox
     :param plot: If 'true' plots mask + selected bboxes
     """
+
 
     label_image = label(mask0)
     bbox_list = []
