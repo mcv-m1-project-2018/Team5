@@ -16,7 +16,8 @@ from skimage.morphology import binary_erosion, disk, opening
 from skimage.restoration import denoise_tv_chambolle
 from skimage.measure import label, regionprops
 
-import utils
+import utils as ut
+import evaluation.evaluation_funcs as ef
 
 
 # Useful directories
@@ -28,7 +29,10 @@ TRAIN_MASKS_DIR = os.path.join(TRAIN_DIR, 'mask')
 TEST_DIR = os.path.join('dataset', 'test')
 
 # Pickle filename with the training data
-PICKLE_DATASET = 'train_data.pkl'
+PICKLE_TRAIN_DATASET = 'train_data.pkl'
+PICKLE_TRAIN_TRAIN_DATASET = 'train_train_data.pkl'
+PICKLE_TEST_TRAIN_DATASET = 'train_test_data.pkl'
+PICKLE_TEST_DATASET = 'test_data.pkl'
 
 # Method number
 METHOD_NUMBER = 1
@@ -40,12 +44,13 @@ F_DENOISE = False
 F_EQ_HIST = False
 F_MORPH = True
 F_FILL_HOLES = False
-F_CONN_COMP = True
+F_CONN_COMP = False
 F_SLID_WIND = False
 F_TEMP_MATCH = False
 F_SLID_WIND_W_INT_IMG = False
 F_CONV = False
-F_PLOT = True
+F_PLOT = False
+F_TRAIN = True
 
 
 # Global variables
@@ -78,16 +83,22 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
-    df = pd.read_pickle(PICKLE_DATASET)
+    # df = ut.get_data(TRAIN_DIR, gt_dir=TRAIN_GTS_DIR, mask_dir=TRAIN_MASKS_DIR)
+    # df.to_pickle(PICKLE_TRAIN_DATASET)
+    # import sys
+    # sys.exit(0)
+    df = pd.read_pickle(PICKLE_TRAIN_DATASET)
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
+        if 3 < idx:
+            break
         # Get mask path
-        mask_path = utils.gt_to_mask(d['gt_file'])
-        raw_name = d['gt_file'].replace('gt.', '').replace('.txt', '')
+        mask_path = ut.raw2mask(d['img_file'])
+        raw_name = d['img_file']
 
         # Get original image
-        orig_img = utils.get_img(TRAIN_DIR, utils.gt_to_img(d['gt_file']))
+        orig_img = ut.get_img(TRAIN_DIR, ut.raw2img(d['img_file']))
 
         # If denoise chambolle flag is set
         if F_DENOISE:
@@ -104,7 +115,7 @@ if __name__ == '__main__':
         # patch_hsv = rgb2hsv(orig_traf_sign)
 
         # Convert image to HSV color space
-        orig_img_hsv = utils.rgb2hsv(orig_img)
+        orig_img_hsv = ut.rgb2hsv(orig_img)
 
         # Get Hue channel
         h = orig_img_hsv[..., 0]
@@ -153,46 +164,53 @@ if __name__ == '__main__':
                 plt.show()
 
             masks = morp_masks
-            print('morp_mask')
 
         if F_CONN_COMP:
             for mask in masks:
                 bboxes.extend(
-                    utils.connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
+                    ut.connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
                 )
 
-            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
             if F_SAVE_BBOX_TXT:
-                utils.bboxes_to_file(bboxes, 'cc.%s.txt' % raw_name, RESULT_DIR, sign_types=None)
+                ut.bboxes_to_file(bboxes, 'cc.%s.txt' % raw_name, RESULT_DIR, sign_types=None)
 
         if F_SLID_WIND:
             for mask in masks:
                 pass
 
-            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_TEMP_MATCH:
             for mask in masks:
                 pass
 
-            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_SLID_WIND_W_INT_IMG:
             for mask in masks:
                 pass
 
-            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         if F_CONV:
             for mask in masks:
                 pass
 
-            bboxes = utils.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
 
         # Final mask
-        mask = utils.merge_masks(masks)
+        mask = ut.merge_masks(masks)
 
-        fname = utils.gt_to_mask(d['gt_file'])
-        utils.save_image(mask, METHOD_DIR, fname)
+        fname = ut.raw2mask(d['img_file'])
+        ut.save_image(mask, METHOD_DIR, fname)
         logger.info('{fname} mask saved in {directory}'.format(fname=fname, directory=METHOD_DIR))
+
+    cf_m = ut.confusion_matrix(METHOD_DIR, TRAIN_MASKS_DIR)
+    ut.text2file(ut.print_confusion_matrix(cf_m), 'point_based_metrics.txt', METHOD_DIR)
+    ut.text2file(ut.print_metrics(ef.performance_evaluation_pixel(*cf_m)), 'point_based_metrics.txt', METHOD_DIR)
+
+    if any(bboxes):
+        ut.text2file(ut.print_confusion_matrix(cf_m), 'window_based_metrics.txt', METHOD_DIR)
+        ut.text2file(ut.print_metrics(ef.performance_evaluation_pixel(*cf_m)), 'window_based_metrics.txt', METHOD_DIR)
