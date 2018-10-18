@@ -30,12 +30,10 @@ TEST_DIR = os.path.join('dataset', 'test')
 
 # Pickle filename with the training data
 PICKLE_TRAIN_DATASET = 'train_data.pkl'
-PICKLE_TRAIN_TRAIN_DATASET = 'train_train_data.pkl'
-PICKLE_TEST_TRAIN_DATASET = 'train_test_data.pkl'
 PICKLE_TEST_DATASET = 'test_data.pkl'
 
 # Method number
-METHOD_NUMBER = 1
+METHOD_NUMBER = 2
 METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMBER))
 
 
@@ -44,7 +42,7 @@ F_DENOISE = False
 F_EQ_HIST = False
 F_MORPH = True
 F_FILL_HOLES = False
-F_CONN_COMP = False
+F_CONN_COMP = True
 F_SLID_WIND = False
 F_TEMP_MATCH = False
 F_SLID_WIND_W_INT_IMG = False
@@ -61,9 +59,8 @@ H_BLUE_MAX = 0.07
 NON_MAX_SUP_TH = 0.5
 
 # Geometrical filter variables (if 'None' that filter won't be applied):
-
 AREA_MIN = 1000
-AREA_MAX =  50000
+AREA_MAX = 50000
 FF_MIN = 0.5
 FF_MAX = 2
 FR_MIN = 0.5
@@ -83,22 +80,24 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
-    # df = ut.get_data(TRAIN_DIR, gt_dir=TRAIN_GTS_DIR, mask_dir=TRAIN_MASKS_DIR)
-    # df.to_pickle(PICKLE_TRAIN_DATASET)
-    # import sys
-    # sys.exit(0)
-    df = pd.read_pickle(PICKLE_TRAIN_DATASET)
+    # If train flag is True, select train dataset
+    if F_TRAIN:
+        df = pd.read_pickle(PICKLE_TRAIN_DATASET)
+    else:
+        df = pd.read_pickle(PICKLE_TEST_DATASET)
+
+    # Dictionary with raw names as keys and list of bboxes as values
+    # (raw names are those without extension and prefix)
+    bboxes_found = dict()
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
-        if 3 < idx:
-            break
-        # Get mask path
-        mask_path = ut.raw2mask(d['img_file'])
+        # Get raw name and the asociated image name
         raw_name = d['img_file']
+        img_name = ut.raw2img(raw_name)
 
         # Get original image
-        orig_img = ut.get_img(TRAIN_DIR, ut.raw2img(d['img_file']))
+        orig_img = ut.get_img(TRAIN_DIR, img_name)
 
         # If denoise chambolle flag is set
         if F_DENOISE:
@@ -126,9 +125,10 @@ if __name__ == '__main__':
             np.logical_or(H_BLUE_MIN < h, h < H_BLUE_MAX)
         ]
 
-        # Create list for bboxes
-        bboxes = list()
+        # Create list for bboxes for this image
+        bboxes_in_img = list()
 
+        # If morphology flag is set
         if F_MORPH:
             # kernel = disk(3)
             kernel = np.ones((3, 3))
@@ -142,10 +142,10 @@ if __name__ == '__main__':
                 plt.figure()
                 plt.subplot(231)
                 plt.imshow(orig_img)
-                plt.title('Original: %s' % d['gt_file'])
+                plt.title('Original: %s' % img_name)
                 plt.subplot(234)
                 plt.imshow(h)
-                plt.title('HSV: %s' % d['gt_file'])
+                plt.title('HSV: %s' % img_name)
 
                 plt.subplot(232)
                 plt.imshow(masks[0])
@@ -165,52 +165,91 @@ if __name__ == '__main__':
 
             masks = morp_masks
 
+        # If connected component flag is set
         if F_CONN_COMP:
+            # Iterate over the different masks previously calculated.
+            # For each max, compute the bounding boxes found in the mask
             for mask in masks:
-                bboxes.extend(
+                bboxes_in_img.extend(
                     ut.connected_components(mask, AREA_MIN, AREA_MAX, FF_MIN, FF_MAX, FR_MIN, PLOT_BBOX)
                 )
 
-            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            # As the bounding box can be found in different masks, non maximal supression
+            # is applied in order to keep only those that are different
+            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
+            # If save bbox flag is set, save the bounding boxes in the image
             if F_SAVE_BBOX_TXT:
-                ut.bboxes_to_file(bboxes, 'cc.%s.txt' % raw_name, RESULT_DIR, sign_types=None)
+                ut.bboxes_to_file(bboxes_in_img, 'cc.%s.txt' % raw_name, METHOD_DIR, sign_types=None)
 
+        # If sliding window flag is set
         if F_SLID_WIND:
+            # Iterate over the different masks previously calculated.
+            # For each max, compute the bounding boxes found in the mask
             for mask in masks:
                 pass
 
-            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            # As the bounding box can be found in different masks, non maximal supression
+            # is applied in order to keep only those that are different
+            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
+        # If template matching flag is set
         if F_TEMP_MATCH:
+            # Iterate over the different masks previously calculated.
+            # For each max, compute the bounding boxes found in the mask
             for mask in masks:
                 pass
 
-            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            # As the bounding box can be found in different masks, non maximal supression
+            # is applied in order to keep only those that are different
+            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
+        # If sliding window with integral image flag is set
         if F_SLID_WIND_W_INT_IMG:
+            # Iterate over the different masks previously calculated.
+            # For each max, compute the bounding boxes found in the mask
             for mask in masks:
                 pass
 
-            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            # As the bounding box can be found in different masks, non maximal supression
+            # is applied in order to keep only those that are different
+            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
+        # If sliding window with convolution flag is set
         if F_CONV:
+            # Iterate over the different masks previously calculated.
+            # For each max, compute the bounding boxes found in the mask
             for mask in masks:
                 pass
 
-            bboxes = ut.non_max_suppression(bboxes, NON_MAX_SUP_TH)
+            # As the bounding box can be found in different masks, non maximal supression
+            # is applied in order to keep only those that are different
+            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
-        # Final mask
+        # Final mask: Merge of the previous masks
         mask = ut.merge_masks(masks)
 
-        fname = ut.raw2mask(d['img_file'])
+        # Get mask name from raw name
+        fname = ut.raw2mask(raw_name)
+        # Save mask in directory
         ut.save_image(mask, METHOD_DIR, fname)
         logger.info('{fname} mask saved in {directory}'.format(fname=fname, directory=METHOD_DIR))
 
-    cf_m = ut.confusion_matrix(METHOD_DIR, TRAIN_MASKS_DIR)
-    ut.text2file(ut.print_confusion_matrix(cf_m), 'point_based_metrics.txt', METHOD_DIR)
-    ut.text2file(ut.print_metrics(ef.performance_evaluation_pixel(*cf_m)), 'point_based_metrics.txt', METHOD_DIR)
+        # If bounding boxes were found in the image, save in the dictionary bboxes_found
+        if any(bboxes_in_img):
+            l = bboxes_found.get(raw_name, [])
+            l.extend(bboxes_in_img)
+            bboxes_found[raw_name] = ut.non_max_suppression(l, NON_MAX_SUP_TH)
 
-    if any(bboxes):
-        ut.text2file(ut.print_confusion_matrix(cf_m), 'window_based_metrics.txt', METHOD_DIR)
-        ut.text2file(ut.print_metrics(ef.performance_evaluation_pixel(*cf_m)), 'window_based_metrics.txt', METHOD_DIR)
+    # Compute confusion matrix for pixel based metrics and save into a file
+    conf_mat = ut.confusion_matrix(METHOD_DIR, TRAIN_MASKS_DIR)
+    ut.text2file(ut.print_confusion_matrix(conf_mat), 'point_based_metrics.txt', METHOD_DIR)
+    ut.text2file(ut.print_pixel_metrics(ef.performance_evaluation_pixel(*conf_mat)), 'point_based_metrics.txt', METHOD_DIR)
+
+    # Compute confusion matrix for window based metrics and save into a file
+    if any(bboxes_found):
+        for fname, bboxes in bboxes_found.items():
+            bboxes_found[fname] = [ut.bbox2evalformat(bbox) for bbox in bboxes]
+
+        # ut.text2file(ut.print_confusion_matrix(conf_mat), 'window_based_metrics.txt', METHOD_DIR)
+        # ut.text2file(ut.print_pixel_metrics(ef.performance_evaluation_pixel(*conf_mat)), 'window_based_metrics.txt', METHOD_DIR)

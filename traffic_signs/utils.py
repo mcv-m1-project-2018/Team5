@@ -7,19 +7,19 @@ import pickle
 import random
 
 # 3rd party modules
-from functools import reduce
-
 import imageio
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 
+from functools import reduce
 from skimage import color
 from skimage.measure import label, regionprops
 from skimage.transform.integral import integral_image
 
 # Local modules
 from evaluation.evaluation_funcs import performance_accumulation_pixel, performance_evaluation_pixel
+
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,22 +32,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_files_from_dir(directory, excl_exts=None):
+def get_files_from_dir(directory, excl_ext=None):
     """
     Get only files from directory.
 
     :param directory: Directory path
-    :param excl_exts: List with extensions to exclude
+    :param excl_ext: List with extensions to exclude
     :return: List of files in directory
     """
 
     logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
 
-    excl_exts = list() if excl_exts is None else excl_exts
+    excl_ext = list() if excl_ext is None else excl_ext
 
     l = [
         f for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_exts
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
     ]
     logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
 
@@ -94,6 +94,16 @@ def get_img(folder_dir, img_dir):
 
 
 def get_patch(img, x_min, y_min, x_max, y_max):
+    """
+    Get patch from an image.
+
+    :param img: Numpy representation of the image
+    :param x_min: X min coordinate
+    :param y_min: Y min coordinate
+    :param x_max: X max coordinate
+    :param y_max: Y max coordinate
+    :return: Numpy representation of the patch image
+    """
     return img[y_min:y_max, x_min:x_max]
 
 
@@ -112,18 +122,49 @@ def img_name_to_mask_name(filename):
 
 
 def raw2gt(raw, ext='txt'):
+    """
+    Convert raw filename format to ground truth format.
+
+    :param raw: Raw filename
+    :param ext: Extension of the ground truth file. 'txt' otherwise
+    :return: Ground truth filename
+    """
+
     return 'gt.{raw}.{ext}'.format(raw=raw, ext=ext)
 
 
 def gt2raw(gt, ext='txt'):
+    """
+    Convert ground truth format to raw filename format.
+
+    :param gt: Ground truth filename
+    :param ext: Extension of the ground truth file. 'txt' otherwise
+    :return: Raw filename
+    """
     return gt.replace('gt.', '').replace('.{ext}'.format(ext=ext), '')
 
 
 def raw2mask(raw, ext='png'):
+    """
+    Convert raw filename format to mask format.
+
+    :param raw: Raw filename
+    :param ext: Extension of the mask file. 'png' otherwise
+    :return: Mask filename
+    """
+
     return 'mask.{raw}.{ext}'.format(raw=raw, ext=ext)
 
 
 def raw2img(raw, ext='jpg'):
+    """
+    Convert raw filename format to imageformat.
+
+    :param raw: Raw filename
+    :param ext: Extension of the image file. 'jpg' otherwise
+    :return: Image filename
+    """
+
     return '{raw}.{ext}'.format(raw=raw, ext=ext)
 
 
@@ -276,7 +317,17 @@ def print_confusion_matrix(values):
     return np.array2string(values) + '\n'
 
 
-def print_metrics(values):
+def print_pixel_metrics(values):
+    l = 'Precision  : %.3f\n' % values[0]
+    l += 'Accuracy   : %.3f\n' % values[1]
+    l += 'Specificity: %.3f\n' % values[2]
+    l += 'Sensitivity: %.3f\n' % values[3]
+    l += 'F1 Score   : %.3f\n' % (2 * values[0] * values[2] / (values[0] + values[2]))
+
+    return l
+
+
+def print_window_metrics(values):
     l = 'Precision  : %.3f\n' % values[0]
     l += 'Accuracy   : %.3f\n' % values[1]
     l += 'Specificity: %.3f\n' % values[2]
@@ -510,12 +561,24 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
 
 
 def text2file(text, fname, dir):
+    """
+    Save string into file.
+
+    :param text: String to save
+    :param fname: Filename of the text file
+    :param dir: Directory where the text file will be placed
+    :return: Path of the text file
+    """
+
+    # Create the directory if it doesn't exist
     if not os.path.exists(dir):
         os.mkdir(dir)
 
+    # Append 'txt' sufix if the filename doesn't end with 'txt
     if not fname.endswith('.txt'):
         fname += '.txt'
 
+    # If text is not a list, convert it to iterate over lines
     if not isinstance(text, list):
         text = [text]
 
@@ -528,6 +591,15 @@ def text2file(text, fname, dir):
 
 
 def bbox2evalformat(bbox):
+    """
+    Convert bounding box representation to the one used for evaluation.
+
+        [tly, tlx, bry, brx] => [x, y, w, h]
+
+    :param bbox: Bounding box
+    :return: Evaluation representation of the boundin box
+    """
+
     tly, tlx, bry, brx = bbox
     x, y = tlx, tly
     w, h = brx - tlx, bry - tly
