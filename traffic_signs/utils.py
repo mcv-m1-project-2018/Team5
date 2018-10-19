@@ -7,13 +7,12 @@ import pickle
 import random
 
 # 3rd party modules
-from functools import reduce
-
 import imageio
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 
+from functools import reduce
 from skimage import color
 from skimage.measure import label, regionprops
 from skimage.transform.integral import integral_image
@@ -24,7 +23,6 @@ from evaluation.evaluation_funcs import performance_accumulation_pixel, performa
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
 # Logger setup
 logging.basicConfig(
     # level=logging.DEBUG,
@@ -34,22 +32,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_files_from_dir(directory, excl_exts=None):
+def get_files_from_dir(directory, excl_ext=None):
     """
     Get only files from directory.
 
     :param directory: Directory path
-    :param excl_exts: List with extensions to exclude
+    :param excl_ext: List with extensions to exclude
     :return: List of files in directory
     """
 
     logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
 
-    excl_exts = list() if excl_exts is None else excl_exts
+    excl_ext = list() if excl_ext is None else excl_ext
 
     l = [
         f for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_exts
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
     ]
     logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
 
@@ -96,6 +94,16 @@ def get_img(folder_dir, img_dir):
 
 
 def get_patch(img, x_min, y_min, x_max, y_max):
+    """
+    Get patch from an image.
+
+    :param img: Numpy representation of the image
+    :param x_min: X min coordinate
+    :param y_min: Y min coordinate
+    :param x_max: X max coordinate
+    :param y_max: Y max coordinate
+    :return: Numpy representation of the patch image
+    """
     return img[y_min:y_max, x_min:x_max]
 
 
@@ -111,6 +119,53 @@ def img_name_to_mask_name(filename):
     logger.debug("'{filename}' converted to '{mask_name}".format(filename=filename, mask_name=mask_name))
 
     return mask_name
+
+
+def raw2gt(raw, ext='txt'):
+    """
+    Convert raw filename format to ground truth format.
+
+    :param raw: Raw filename
+    :param ext: Extension of the ground truth file. 'txt' otherwise
+    :return: Ground truth filename
+    """
+
+    return 'gt.{raw}.{ext}'.format(raw=raw, ext=ext)
+
+
+def gt2raw(gt, ext='txt'):
+    """
+    Convert ground truth format to raw filename format.
+
+    :param gt: Ground truth filename
+    :param ext: Extension of the ground truth file. 'txt' otherwise
+    :return: Raw filename
+    """
+    return gt.replace('gt.', '').replace('.{ext}'.format(ext=ext), '')
+
+
+def raw2mask(raw, ext='png'):
+    """
+    Convert raw filename format to mask format.
+
+    :param raw: Raw filename
+    :param ext: Extension of the mask file. 'png' otherwise
+    :return: Mask filename
+    """
+
+    return 'mask.{raw}.{ext}'.format(raw=raw, ext=ext)
+
+
+def raw2img(raw, ext='jpg'):
+    """
+    Convert raw filename format to imageformat.
+
+    :param raw: Raw filename
+    :param ext: Extension of the image file. 'jpg' otherwise
+    :return: Image filename
+    """
+
+    return '{raw}.{ext}'.format(raw=raw, ext=ext)
 
 
 def gt_to_mask(gt):
@@ -234,7 +289,7 @@ def confusion_matrix(results_dir, masks_dir):
     # Iterate over image paths
     for img_path in result_imgs:
         # Convert image path to mask path
-        mask_path = img_name_to_mask_name(img_path)
+        mask_path = img_name_to_mask_name(img_path) if not img_path.startswith('mask.') else img_path
 
         # Compute perfomance measures
         tf_val = np.array(performance_accumulation_pixel(
@@ -259,58 +314,74 @@ def print_confusion_matrix(values):
     # Reshape matrix values
     values = np.array(values).reshape((2, 2))
 
-    # Turn off scientific notation for float values
-    np.set_printoptions(suppress=True)
-    print(values)
-    np.set_printoptions(suppress=False)
+    return np.array2string(values) + '\n'
 
 
-def print_metrics(values):
-    print('Precision  : %.3f' % values[0])
-    print('Accuracy   : %.3f' % values[1])
-    print('Specificity: %.3f' % values[2])
-    print('Sensitivity: %.3f' % values[3])
-    print('F1 Score   : %.3f' % (2 * values[0] * values[2] / (values[0] + values[2])))
+def print_pixel_metrics(values):
+    l = 'Precision  : %.3f\n' % values[0]
+    l += 'Accuracy   : %.3f\n' % values[1]
+    l += 'Specificity: %.3f\n' % values[2]
+    l += 'Sensitivity: %.3f\n' % values[3]
+    l += 'F1 Score   : %.3f\n' % (2 * values[0] * values[2] / (values[0] + values[2]))
+
+    return l
 
 
-def get_train_data(path_train, path_gt):
-    columns = ['gt_file', 'type', 'width', 'height', 'bbox_area', 'form_factor',
-             'tly', 'tlx', 'bry', 'brx', 'mask_area', 'filling_ratio', 'mask']
-    gts = os.listdir(path_gt)
+def print_window_metrics(values):
+    l = 'Precision  : %.3f\n' % values[0]
+    l += 'Accuracy   : %.3f\n' % values[1]
+    l += 'Specificity: %.3f\n' % values[2]
+    l += 'Sensitivity: %.3f\n' % values[3]
+    l += 'F1 Score   : %.3f\n' % (2 * values[0] * values[2] / (values[0] + values[2]))
 
-    l = list()
-    for gt in gts:
-        mask_path = gt_to_mask(gt)
-        mask_img = get_img(path_train, mask_path)
-        # orig_img = get_train_img(gt_to_img(gt))
+    return l
 
-        for gt_datum in get_gt_data(path_gt, gt):
-            tly, tlx, bry, brx, signal_type = parse_gt_data(gt_datum)
 
-            d = dict()
+def get_data(data_dir, gt_dir=None, mask_dir=None):
+    if gt_dir is None:
+        columns = ['img_file']
 
-            w = brx - tlx
-            h = bry - tly
+        l = list(map(lambda x: '.'.join(x.split('.')[:-1]), get_files_from_dir(data_dir)))
+    else:
+        columns = ['img_file', 'type', 'width', 'height', 'bbox_area', 'form_factor',
+                   'tly', 'tlx', 'bry', 'brx', 'mask_area', 'filling_ratio', 'mask']
 
-            d['gt_file'] = gt
-            d['type'] = signal_type.strip()
-            d['width'] = w
-            d['height'] = h
-            d['bbox_area'] = w * h
-            d['form_factor'] = w / h
+        gts = os.listdir(gt_dir)
 
-            d['tly'] = round(tly)
-            d['tlx'] = round(tlx)
-            d['bry'] = round(bry)
-            d['brx'] = round(brx)
+        l = list()
+        for gt in gts:
+            raw_name = gt2raw(gt)
+            mask_path = gt_to_mask(gt)
+            mask_img = get_img(mask_dir, mask_path)
+            # orig_img = get_train_img(gt_to_img(gt))
 
-            mask_patch = get_patch(mask_img, d['tlx'], d['tly'], d['brx'], d['bry'])
-            mask_area = np.count_nonzero(mask_patch)
-            d['mask_area'] = mask_area
-            d['filling_ratio'] = mask_area / d['bbox_area']
-            d['mask'] = mask_patch != 0
+            for gt_datum in get_gt_data(gt_dir, gt):
+                tly, tlx, bry, brx, signal_type = parse_gt_data(gt_datum)
 
-            l.append(list(d.values()))
+                d = dict()
+
+                w = brx - tlx
+                h = bry - tly
+
+                d['img_file'] = raw_name
+                d['type'] = signal_type.strip()
+                d['width'] = w
+                d['height'] = h
+                d['bbox_area'] = w * h
+                d['form_factor'] = w / h
+
+                d['tly'] = round(tly)
+                d['tlx'] = round(tlx)
+                d['bry'] = round(bry)
+                d['brx'] = round(brx)
+
+                mask_patch = get_patch(mask_img, d['tlx'], d['tly'], d['brx'], d['bry'])
+                mask_area = np.count_nonzero(mask_patch)
+                d['mask_area'] = mask_area
+                d['filling_ratio'] = mask_area / d['bbox_area']
+                d['mask'] = mask_patch != 0
+
+                l.append(list(d.values()))
 
     return pd.DataFrame(l, columns=columns)
 
@@ -354,6 +425,9 @@ def non_max_suppression(bboxes, overlap_thresh):
     :param overlap_thresh: Overlaping threshold
     :return: List of merger bounding boxes
     """
+
+    bboxes = np.array(bboxes)
+
     # If there are no boxes, return an empty list
     if len(bboxes) == 0:
         return []
@@ -427,7 +501,6 @@ def merge_masks(masks):
 
 
 def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_max=None, fr_min=None, plot=False):
-
     """
     :param mask0: Incoming masz (2D array)
     :param area_min: Min area allowed for bbox
@@ -437,7 +510,6 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
     :param fr_min: Min filling ratio allowed for bbox
     :param plot: If 'true' plots mask + selected bboxes
     """
-
 
     label_image = label(mask0)
     bbox_list = []
@@ -480,7 +552,7 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
 
         bbox_list.append([minr, minc, maxr, maxc])
 
-        if plot == True:
+        if plot:
             rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
                                       fill=False, edgecolor='red', linewidth=2)
             ax.add_patch(rect)
@@ -488,3 +560,68 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
     return bbox_list
 
 
+def text2file(text, fname, dir):
+    """
+    Save string into file.
+
+    :param text: String to save
+    :param fname: Filename of the text file
+    :param dir: Directory where the text file will be placed
+    :return: Path of the text file
+    """
+
+    # Create the directory if it doesn't exist
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+
+    # Append 'txt' sufix if the filename doesn't end with 'txt
+    if not fname.endswith('.txt'):
+        fname += '.txt'
+
+    # If text is not a list, convert it to iterate over lines
+    if not isinstance(text, list):
+        text = [text]
+
+    fpath = os.path.join(dir, fname)
+    with open(fpath, 'a') as f:
+        for line in text:
+            f.write(line)
+
+    return fpath
+
+
+def bbox2evalformat(bbox):
+    """
+    Convert bounding box representation to the one used for evaluation.
+
+        [tly, tlx, bry, brx] => [x, y, w, h]
+
+    :param bbox: Bounding box
+    :return: Evaluation representation of the boundin box
+    """
+
+    tly, tlx, bry, brx = bbox
+    x, y = tlx, tly
+    w, h = brx - tlx, bry - tly
+
+    return x, y, w, h
+
+
+def sliding_window(image, stepSize, windowSize):
+    # slide a window across the image
+    for y in range(0, image.shape[0], stepSize):
+        for x in range(0, image.shape[1], stepSize):
+            # yield the current window
+            yield (x, y, image[y:y + windowSize[1], x:x + windowSize[0]])
+
+
+def mse(imageA, imageB):
+    # the 'Mean Squared Error' between the two images is the
+    # sum of the squared difference between the two images;
+    # NOTE: the two images must have the same dimension
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+
+    # return the MSE, the lower the error, the more "similar"
+    # the two images are
+    return err
