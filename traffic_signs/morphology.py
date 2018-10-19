@@ -18,7 +18,7 @@ from skimage.measure import label, regionprops
 
 import utils as ut
 import evaluation.evaluation_funcs as ef
-
+from template_matching import calculate_template, template_matching_candidates, template_matching_global
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -40,15 +40,18 @@ METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMB
 # Flags
 F_DENOISE = False
 F_EQ_HIST = False
-F_MORPH = True
+F_MORPH = False
 F_FILL_HOLES = False
-F_CONN_COMP = True
+F_CONN_COMP = False
 F_SLID_WIND = False
-F_TEMP_MATCH = False
+F_TEMP_MATCH_GLOBAL = False
+F_TEMP_MATCH_CC = False
+F_TEMP_MATCH_SLW = False
 F_SLID_WIND_W_INT_IMG = False
 F_CONV = False
 F_PLOT = False
 F_TRAIN = True
+
 
 
 # Global variables
@@ -67,7 +70,8 @@ FR_MIN = 0.5
 
 # Geometrical filter features:
 PLOT_BBOX = False
-F_SAVE_BBOX_TXT = True
+F_SAVE_BBOX_TXT = False
+
 
 
 # Logger setup
@@ -89,6 +93,10 @@ if __name__ == '__main__':
     # Dictionary with raw names as keys and list of bboxes as values
     # (raw names are those without extension and prefix)
     bboxes_found = dict()
+
+    # Calculate template of each signal if necessary
+    if (F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_CC or F_TEMP_MATCH_SLW):
+        templates = calculate_template(df, TRAIN_DIR)
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
@@ -193,18 +201,30 @@ if __name__ == '__main__':
             # is applied in order to keep only those that are different
             bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
-        # If template matching flag is set
-        if F_TEMP_MATCH:
-            # Iterate over the different masks previously calculated.
-            # For each max, compute the bounding boxes found in the mask
-            for mask in masks:
-                pass
 
-            # As the bounding box can be found in different masks, non maximal supression
-            # is applied in order to keep only those that are different
-            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
+        # TASK 4
+        if F_TEMP_MATCH_GLOBAL:
 
-        # If sliding window with integral image flag is set
+            # Get original image
+            orig_img = get_img(TRAIN_DIR, gt_to_img(d['gt_file']))
+            # Process image
+            template_matching_global(orig_img , templates)
+
+        if F_TEMP_MATCH_CC:
+            if F_CONN_COMP is False:
+                continue
+
+            # Process bboxes
+            template_matching_candidates(bboxes, templates)
+
+        if F_TEMP_MATCH_SLW:
+            if F_SLID_WIND is False:
+                continue
+
+            # Process bboxes
+            template_matching_candidates(bboxes, templates)
+
+        # TASK 6
         if F_SLID_WIND_W_INT_IMG:
             # Iterate over the different masks previously calculated.
             # For each max, compute the bounding boxes found in the mask

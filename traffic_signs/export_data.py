@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Built-in modules
-
 import os
 import glob
 import shutil
@@ -10,11 +8,9 @@ from PIL import Image
 
 def export_image_and_mask(images_dir, masks_dir, results_dir):
     """
-
     :param images_dir: images directory
     :param masks_dir: masks directory
     :param results_dir: destination directory
-    :return:
     """
 
     # If the directory already exists, delete it
