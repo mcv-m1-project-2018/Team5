@@ -11,6 +11,7 @@ import imageio
 import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
+import matplotlib.pylab as plt
 
 from functools import reduce
 from skimage import color

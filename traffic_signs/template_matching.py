@@ -3,23 +3,12 @@
 import os
 import pandas as pd
 from numpy import asarray
+import matplotlib.pylab as plt
 
 from scipy import signal
 from scipy import misc
 from PIL import Image
-from utils import gt_to_img
-
-
-def calculate_template(data, train_dir):
-    """
-    Calculate the average image of the four shapes
-
-    :param data:
-    :param train_dir:
-    :param clase:
-
-    :return: list of numpy arrays
-    """
+import utils as ut
 
 
 def calculate_template(data, TRAIN_DIR):
@@ -39,7 +28,8 @@ def calculate_template(data, TRAIN_DIR):
     for index, row in data.iterrows():
 
         # Read image
-        img = Image.open(os.path.join(TRAIN_DIR, gt_to_img(row['gt_file'])))  # .convert('LA')
+        raw_name = row['img_file']
+        img = Image.open(os.path.join(TRAIN_DIR, raw_name + '.jpg')).convert('LA')
 
         # Crop image
         img = img.crop((row['tlx'], row['tly'], row['brx'], row['bry']))
@@ -86,22 +76,52 @@ def calculate_template(data, TRAIN_DIR):
 
 
 
-def template_matching_candidates(candidates, templates, mode="correlation", threshold=0.5):
+def template_matching_candidates(image_dir, candidates, templates, mode="correlation", threshold=0.5):
+    """
+
+    :param image_dir: path to the image --> "example/image1.jpg"
+    :param candidates: list of masks
+    :param templates: list of templates
+    :param mode:
+    :param threshold:
+    :return:
+    """
     if mode != "correlation" and mode != "subtraction":
         raise
 
+    # Read image
+    img = Image.open(image_dir).convert('LA')
+
     for candidate in candidates:
+
+        #print(candidate)
+        # Crop image
+        img_crop = img.crop((candidate[1], candidate[0], candidate[3], candidate[2]))
+
+        # Match sizes of candidate and templates
+        img_crop = img_crop.resize((90,90))
+        #plt.figure()
+        #plt.imshow(img_crop)
+        #plt.show()
+        img_crop = asarray(img_crop)
+        img_crop = img_crop[:, :, 0]
+        img_crop = (img_crop - img_crop.mean())/img_crop.std()
+
         for template in templates:
-            # Match sizes of candidate and templates
+            template = asarray(template)
+            template = template[:,:,0]
+            template = (template - template.mean())/template.std()
 
             if mode == "correlation":
-                # asdf
-                0
+                #a = signal.correlate2d(img_crop, template, mode='valid')
+                a = abs(img_crop - template).sum()
+                #print(a)
             else:
                 # Subtraction
-                1
-
+                a = abs(img_crop - template).sum()
+                print(a)
             # Apply threshold and save classification
+
 
     return 0
 
@@ -110,15 +130,17 @@ def template_matching_global(image, templates, mode="correlation", threshold=0.5
     if mode != "correlation" and mode != "subtraction":
         raise
 
+    # TODO
     # Create numpy with same size as image
 
     # Move image_size - template_size steps
+    """
     face = misc.face(gray=True) - misc.face(gray=True).mean()
-    template = np.copy(face[300:365, 670:750])  # right eye
+        template = np.copy(face[300:365, 670:750])  # right eye
     template -= template.mean()
     face = face + np.random.randn(*face.shape) * 50  # add noise
     corr = signal.correlate2d(face, template, boundary='symm', mode='same')
     y, x = np.unravel_index(np.argmax(corr), corr.shape)  # find the match
-
+    """
     return 0
 
