@@ -18,7 +18,7 @@ from skimage.measure import label, regionprops
 
 import utils as ut
 import evaluation.evaluation_funcs as ef
-
+from template_matching import calculate_template, template_matching_candidates, template_matching_global
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,17 +38,20 @@ METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMB
 
 
 # Flags
-F_DENOISE = False
-F_EQ_HIST = False
+F_DENOISE = True
+F_EQ_HIST = True
 F_MORPH = True
-F_FILL_HOLES = False
+F_FILL_HOLES = True
 F_CONN_COMP = True
 F_SLID_WIND = False
-F_TEMP_MATCH = False
+F_TEMP_MATCH_GLOBAL = False
+F_TEMP_MATCH_CC = False
+F_TEMP_MATCH_SLW = False
 F_SLID_WIND_W_INT_IMG = False
 F_CONV = False
 F_PLOT = False
 F_TRAIN = True
+
 
 
 # Global variables
@@ -67,7 +70,8 @@ FR_MIN = 0.5
 
 # Geometrical filter features:
 PLOT_BBOX = False
-F_SAVE_BBOX_TXT = True
+F_SAVE_BBOX_TXT = False
+
 
 
 # Logger setup
@@ -89,6 +93,10 @@ if __name__ == '__main__':
     # Dictionary with raw names as keys and list of bboxes as values
     # (raw names are those without extension and prefix)
     bboxes_found = dict()
+
+    # Calculate template of each signal if necessary
+    if (F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_CC or F_TEMP_MATCH_SLW):
+        templates = calculate_template(df, TRAIN_DIR)
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
@@ -177,7 +185,7 @@ if __name__ == '__main__':
             # As the bounding box can be found in different masks, non maximal supression
             # is applied in order to keep only those that are different
             bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
-
+            print(bboxes_in_img)
             # If save bbox flag is set, save the bounding boxes in the image
             if F_SAVE_BBOX_TXT:
                 ut.bboxes_to_file(bboxes_in_img, 'cc.%s.txt' % raw_name, METHOD_DIR, sign_types=None)
@@ -193,18 +201,27 @@ if __name__ == '__main__':
             # is applied in order to keep only those that are different
             bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
 
-        # If template matching flag is set
-        if F_TEMP_MATCH:
-            # Iterate over the different masks previously calculated.
-            # For each max, compute the bounding boxes found in the mask
-            for mask in masks:
-                pass
 
-            # As the bounding box can be found in different masks, non maximal supression
-            # is applied in order to keep only those that are different
-            bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
+        # TASK 4
+        if F_TEMP_MATCH_GLOBAL:
+            # Process image
+            template_matching_global(d['img_file'] , templates)
 
-        # If sliding window with integral image flag is set
+        if F_TEMP_MATCH_CC:
+            if F_CONN_COMP is False:
+                raise
+
+            # Process bboxes
+            template_matching_candidates(os.path.join(TRAIN_DIR, d['img_file'] + '.jpg'), bboxes_in_img, templates)
+
+        if F_TEMP_MATCH_SLW:
+            if F_SLID_WIND is False:
+                raise
+
+            # Process bboxes
+            template_matching_candidates(bboxes_in_img, templates)
+
+        # TASK 6
         if F_SLID_WIND_W_INT_IMG:
             # Iterate over the different masks previously calculated.
             # For each max, compute the bounding boxes found in the mask
@@ -236,8 +253,14 @@ if __name__ == '__main__':
         logger.info('{fname} mask saved in {directory}'.format(fname=fname, directory=METHOD_DIR))
 
         # If bounding boxes were found in the image, save in the dictionary bboxes_found
-        if any(bboxes_in_img):
+        if len(bboxes_in_img) != 0:
             l = bboxes_found.get(raw_name, [])
+            print(type(l))
+            if type(l).__module__ == np.__name__:
+                l = l.tolist()
+            print(type(l))
+            print(raw_name)
+            #print(l)
             l.extend(bboxes_in_img)
             bboxes_found[raw_name] = ut.non_max_suppression(l, NON_MAX_SUP_TH)
 
@@ -247,7 +270,7 @@ if __name__ == '__main__':
     ut.text2file(ut.print_pixel_metrics(ef.performance_evaluation_pixel(*conf_mat)), 'point_based_metrics.txt', METHOD_DIR)
 
     # Compute confusion matrix for window based metrics and save into a file
-    if any(bboxes_found):
+    if len(bboxes_found) != 0:
         for fname, bboxes in bboxes_found.items():
             bboxes_found[fname] = [ut.bbox2evalformat(bbox) for bbox in bboxes]
 

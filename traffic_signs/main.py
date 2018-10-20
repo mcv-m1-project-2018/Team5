@@ -90,7 +90,7 @@ logger.info(
     "%d masks saved in %.3fs (%.3fs per frame)" % (len(test_images), time.time() - t0, t_frame / len(test_images))
 )
 
-# Export images + masks results
+### Export images + masks results
 # export_image_and_mask(IMAGE_DIR, RESULT_DIR, RESULT_DIR.replace("masks","image+masks"))
 
 
@@ -98,4 +98,3 @@ logger.info(
 # print_confusion_matrix(conf_mat)
 # metrics = performance_evaluation_pixel(*conf_mat)
 # print_metrics(metrics)
-
