@@ -5,6 +5,7 @@ import logging
 import os
 import pickle
 import random
+import glob
 
 # 3rd party modules
 import imageio
@@ -282,20 +283,27 @@ def confusion_matrix(results_dir, masks_dir):
     """
 
     # Getting calculated masks
-    result_imgs = get_files_from_dir(results_dir)
+    #result_imgs = get_files_from_dir(results_dir)
+    result_imgs = glob.glob(results_dir + "/*.png")
 
     # List with values TP, FP, FN, TN
     tf_values = np.zeros(4)
 
     # Iterate over image paths
     for img_path in result_imgs:
+        print(img_path)
+        image_name = img_path.split("/")[-1]
         # Convert image path to mask path
-        mask_path = img_name_to_mask_name(img_path) if not img_path.startswith('mask.') else img_path
+        # mask_path = img_name_to_mask_name(img_path) if not img_path.startswith('mask.') else img_path
+        mask_path = os.path.join(masks_dir, image_name)
+        print(mask_path)
 
         # Compute perfomance measures
         tf_val = np.array(performance_accumulation_pixel(
-            get_img(results_dir, img_path),
-            get_img(masks_dir, mask_path)
+            #get_img(results_dir, img_path),
+            #get_img(masks_dir, mask_path)
+            imageio.imread(img_path),
+            imageio.imread(mask_path)
         ))
 
         # Add them up
