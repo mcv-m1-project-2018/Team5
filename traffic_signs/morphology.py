@@ -38,11 +38,11 @@ METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMB
 
 
 # Flags
-F_DENOISE = True
+F_DENOISE = False
 F_EQ_HIST = True
 F_MORPH = True
-F_FILL_HOLES = True
-F_CONN_COMP = True
+F_FILL_HOLES = False
+F_CONN_COMP = False
 F_SLID_WIND = False
 F_TEMP_MATCH_GLOBAL = False
 F_TEMP_MATCH_CC = False
@@ -51,8 +51,6 @@ F_SLID_WIND_W_INT_IMG = False
 F_CONV = False
 F_PLOT = False
 F_TRAIN = True
-
-
 
 # Global variables
 H_RED_MIN = 0.57
@@ -71,8 +69,6 @@ FR_MIN = 0.5
 # Geometrical filter features:
 PLOT_BBOX = False
 F_SAVE_BBOX_TXT = False
-
-
 
 # Logger setup
 logging.basicConfig(
@@ -95,11 +91,12 @@ if __name__ == '__main__':
     bboxes_found = dict()
 
     # Calculate template of each signal if necessary
-    if (F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_CC or F_TEMP_MATCH_SLW):
+    if F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_CC or F_TEMP_MATCH_SLW:
         templates = calculate_template(df, TRAIN_DIR)
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
+        logger.info('New image')
         # Get raw name and the asociated image name
         raw_name = d['img_file']
         img_name = ut.raw2img(raw_name)
@@ -108,10 +105,12 @@ if __name__ == '__main__':
         orig_img = ut.get_img(TRAIN_DIR, img_name)
 
         # If denoise chambolle flag is set
+        logger.info('F_DENOISE')
         if F_DENOISE:
             orig_img = denoise_tv_chambolle(orig_img, weight=0.2, multichannel=True)
 
         # If histogram equalization flag is set
+        logger.info('F_EQ_HIST')
         if F_EQ_HIST:
             orig_img = equalize_hist(orig_img)
 
@@ -137,6 +136,7 @@ if __name__ == '__main__':
         bboxes_in_img = list()
 
         # If morphology flag is set
+        logger.info('F_MORPH')
         if F_MORPH:
             # kernel = disk(3)
             kernel = np.ones((3, 3))
@@ -174,6 +174,7 @@ if __name__ == '__main__':
             masks = morp_masks
 
         # If connected component flag is set
+        logger.info('F_CONN_COMP')
         if F_CONN_COMP:
             # Iterate over the different masks previously calculated.
             # For each max, compute the bounding boxes found in the mask
@@ -200,7 +201,6 @@ if __name__ == '__main__':
             # As the bounding box can be found in different masks, non maximal supression
             # is applied in order to keep only those that are different
             bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
-
 
         # TASK 4
         if F_TEMP_MATCH_GLOBAL:
