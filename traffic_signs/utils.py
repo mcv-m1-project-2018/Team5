@@ -511,7 +511,7 @@ def merge_masks(masks):
 
 def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_max=None, fr_min=None, plot=False):
     """
-    :param mask0: Incoming masz (2D array)
+    :param mask0: Incoming mask (2D array)
     :param area_min: Min area allowed for bbox
     :param area_max: Max area allowed for bbox
     :param ff_min: Min form factor allowed for bbox
@@ -559,7 +559,7 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
                 del (minr, minc, maxr, maxc)
                 continue
 
-        bbox_list.append([minr, minc, maxr, maxc])
+        bbox_list.append([minc, minr, maxc, maxr])
 
         if plot:
             rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,

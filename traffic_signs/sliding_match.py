@@ -49,7 +49,7 @@ def sliding_match(image_orig):
     # load the image and define the window width and height
     (winW, winH) = (32, 32)
 
-    # load the groun truth windows
+    # load the ground truth windows
     triangle_1 = cv2.imread(os.path.join(GT_DIR, 'triangle.png'))
     triangle_2 = cv2.imread(os.path.join(GT_DIR, 'triangle_i.png'))
     square = cv2.imread(os.path.join(GT_DIR, 'square.png'))

@@ -6,8 +6,6 @@ import os
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-import imageio
-import matplotlib.patches as mpatches
 
 
 from scipy.ndimage.morphology import binary_fill_holes
@@ -18,12 +16,14 @@ from skimage.measure import label, regionprops
 
 import utils as ut
 import evaluation.evaluation_funcs as ef
-from template_matching import calculate_template, template_matching_candidates, template_matching_global
+from template_matching import calculate_template, template_matching_candidates_2, template_matching_global, get_templates
+from sliding_match import sliding_match
 
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULT_DIR = os.path.join('results')
 TRAIN_DIR = os.path.join('dataset', 'train')
+TRAIN_DIR_2 = os.path.join('dataset', 'train')
 TRAIN_GTS_DIR = os.path.join(TRAIN_DIR, 'gt')
 TRAIN_MASKS_DIR = os.path.join(TRAIN_DIR, 'mask')
 TEST_DIR = os.path.join('dataset', 'test')
@@ -33,7 +33,7 @@ PICKLE_TRAIN_DATASET = 'train_data.pkl'
 PICKLE_TEST_DATASET = 'test_data.pkl'
 
 # Method number
-METHOD_NUMBER = 2
+METHOD_NUMBER = 13
 METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMBER))
 
 
@@ -41,16 +41,15 @@ METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMB
 F_DENOISE = False
 F_EQ_HIST = True
 F_MORPH = True
-F_FILL_HOLES = False
+F_FILL_HOLES = True
 F_CONN_COMP = False
-F_SLID_WIND = False
+F_SLID_WIND = True
 F_TEMP_MATCH_GLOBAL = False
-F_TEMP_MATCH_CC = False
-F_TEMP_MATCH_SLW = False
+F_TEMP_MATCH_WINDOW = True
 F_SLID_WIND_W_INT_IMG = False
 F_CONV = False
 F_PLOT = False
-F_TRAIN = True
+F_TRAIN = False
 
 # Global variables
 H_RED_MIN = 0.57
@@ -68,7 +67,7 @@ FR_MIN = 0.5
 
 # Geometrical filter features:
 PLOT_BBOX = False
-F_SAVE_BBOX_TXT = False
+F_SAVE_BBOX_TXT = True
 
 # Logger setup
 logging.basicConfig(
@@ -85,32 +84,33 @@ if __name__ == '__main__':
         df = pd.read_pickle(PICKLE_TRAIN_DATASET)
     else:
         df = pd.read_pickle(PICKLE_TEST_DATASET)
+        TRAIN_DIR = TEST_DIR
 
     # Dictionary with raw names as keys and list of bboxes as values
     # (raw names are those without extension and prefix)
     bboxes_found = dict()
 
     # Calculate template of each signal if necessary
-    if F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_CC or F_TEMP_MATCH_SLW:
-        templates = calculate_template(df, TRAIN_DIR)
+    if F_TEMP_MATCH_GLOBAL or F_TEMP_MATCH_WINDOW:
+        #templates = calculate_template(df, TRAIN_DIR_2)
+        new_templates = get_templates()
 
     # Iterate over traffic signal masks
     for idx, d in df.iterrows():
         logger.info('New image')
         # Get raw name and the asociated image name
         raw_name = d['img_file']
+        print(raw_name)
         img_name = ut.raw2img(raw_name)
 
         # Get original image
         orig_img = ut.get_img(TRAIN_DIR, img_name)
 
         # If denoise chambolle flag is set
-        logger.info('F_DENOISE')
         if F_DENOISE:
             orig_img = denoise_tv_chambolle(orig_img, weight=0.2, multichannel=True)
 
         # If histogram equalization flag is set
-        logger.info('F_EQ_HIST')
         if F_EQ_HIST:
             orig_img = equalize_hist(orig_img)
 
@@ -136,7 +136,6 @@ if __name__ == '__main__':
         bboxes_in_img = list()
 
         # If morphology flag is set
-        logger.info('F_MORPH')
         if F_MORPH:
             # kernel = disk(3)
             kernel = np.ones((3, 3))
@@ -174,7 +173,6 @@ if __name__ == '__main__':
             masks = morp_masks
 
         # If connected component flag is set
-        logger.info('F_CONN_COMP')
         if F_CONN_COMP:
             # Iterate over the different masks previously calculated.
             # For each max, compute the bounding boxes found in the mask
@@ -186,16 +184,17 @@ if __name__ == '__main__':
             # As the bounding box can be found in different masks, non maximal supression
             # is applied in order to keep only those that are different
             bboxes_in_img = ut.non_max_suppression(bboxes_in_img, NON_MAX_SUP_TH)
-            print(bboxes_in_img)
+            # print(bboxes_in_img)
             # If save bbox flag is set, save the bounding boxes in the image
-            if F_SAVE_BBOX_TXT:
-                ut.bboxes_to_file(bboxes_in_img, 'cc.%s.txt' % raw_name, METHOD_DIR, sign_types=None)
+            #if F_SAVE_BBOX_TXT:
+            #    ut.bboxes_to_file(bboxes_in_img, 'cc.%s.txt' % raw_name, METHOD_DIR, sign_types=None)
 
         # If sliding window flag is set
         if F_SLID_WIND:
             # Iterate over the different masks previously calculated.
             # For each max, compute the bounding boxes found in the mask
             for mask in masks:
+                bboxes_in_img.extend(sliding_match(mask))
                 pass
 
             # As the bounding box can be found in different masks, non maximal supression
@@ -205,21 +204,22 @@ if __name__ == '__main__':
         # TASK 4
         if F_TEMP_MATCH_GLOBAL:
             # Process image
-            template_matching_global(d['img_file'] , templates)
+            template_matching_global(d['img_file'] , new_templates)
 
-        if F_TEMP_MATCH_CC:
+        if F_TEMP_MATCH_WINDOW:
             if F_CONN_COMP is False:
                 raise
 
             # Process bboxes
-            template_matching_candidates(os.path.join(TRAIN_DIR, d['img_file'] + '.jpg'), bboxes_in_img, templates)
+            total_masks = np.zeros((np.shape(masks[0])))
+            for mask in masks:
+                total_masks = np.logical_or(total_masks, mask)
 
-        if F_TEMP_MATCH_SLW:
-            if F_SLID_WIND is False:
-                raise
+            bboxes_in_img = template_matching_candidates_2(total_masks, bboxes_in_img, new_templates)
 
-            # Process bboxes
-            template_matching_candidates(bboxes_in_img, templates)
+            if F_SAVE_BBOX_TXT:
+                ut.bboxes_to_file(bboxes_in_img, 'tm_cc.%s.txt' % raw_name, METHOD_DIR, sign_types=None)
+
 
         # TASK 6
         if F_SLID_WIND_W_INT_IMG:
@@ -255,15 +255,20 @@ if __name__ == '__main__':
         # If bounding boxes were found in the image, save in the dictionary bboxes_found
         if len(bboxes_in_img) != 0:
             l = bboxes_found.get(raw_name, [])
-            print(type(l))
             if type(l).__module__ == np.__name__:
                 l = l.tolist()
-            print(type(l))
-            print(raw_name)
-            #print(l)
             l.extend(bboxes_in_img)
             bboxes_found[raw_name] = ut.non_max_suppression(l, NON_MAX_SUP_TH)
 
+
+    # pasar bboxes_found a lista
+
+    bboxes_final_list = []
+    for i in bboxes_found.values():
+        bboxes_final_list.append(i)
+    ut.bbox_to_pkl(bboxes_final_list, 'bbox_method_13.pkl')
+
+    """
     # Compute confusion matrix for pixel based metrics and save into a file
     conf_mat = ut.confusion_matrix(METHOD_DIR, TRAIN_MASKS_DIR)
     ut.text2file(ut.print_confusion_matrix(conf_mat), 'point_based_metrics.txt', METHOD_DIR)
@@ -276,3 +281,4 @@ if __name__ == '__main__':
 
         # ut.text2file(ut.print_confusion_matrix(conf_mat), 'window_based_metrics.txt', METHOD_DIR)
         # ut.text2file(ut.print_pixel_metrics(ef.performance_evaluation_pixel(*conf_mat)), 'window_based_metrics.txt', METHOD_DIR)
+    """
