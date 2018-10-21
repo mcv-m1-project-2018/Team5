@@ -1,11 +1,11 @@
 import cv2
 import os
 import numpy as np
-
+import heapq
 import matplotlib.pyplot as plt
 from utils import sliding_window
 from utils import mse
-from skimage.measure import compare_ssim
+from skimage.measure import compare_ssim, label, regionprops
 
 IMAGE_DIR = 'results'
 IMAGE = os.path.join(IMAGE_DIR, '01.002811.png')
@@ -48,8 +48,16 @@ thresh_ssim_square = 0.0006343029487377155
 thresh_ssim_rectangle = 0.00019161215566232428
 thresh_ssim_circle = 0.08740093769675207
 
-scores_mse = []
-scores_ssim = []
+scores_mse_t1 = []
+scores_ssim_t1 = []
+scores_mse_t2 = []
+scores_ssim_t2 = []
+scores_mse_s = []
+scores_ssim_s = []
+scores_mse_c = []
+scores_ssim_c = []
+scores_mse_r = []
+scores_ssim_r = []
 count = 0
 bbox_list = []
 
@@ -61,96 +69,99 @@ for (x, y, window) in sliding_window(image, stepSize=32, windowSize=(winW, winH)
 
     window = window[:, :, 0]
 
+    plt.imshow(window)
 
-    #########################################################################################
-    # calculate the mean square error for triangle_1
-    score_mse = mse(window, triangle_1)
-    scores_mse.append(score_mse)
+    if 1:
 
-    if score_mse < thresh_mse_triangle_1:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
+        #########################################################################################
+        # calculate the mean square error for triangle_1
+        score_mse = mse(window, triangle_1)
+        scores_mse_t1.append(score_mse)
 
-    # calculate the structuaral similarity index for triangle_1
-    (score_ssim, diff) = compare_ssim(window, triangle_1, full=True)
-    scores_ssim.append(score_ssim)
+        if score_mse < thresh_mse_triangle_1:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
 
-    if score_ssim < thresh_ssim_triangle_1:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
+        # calculate the structuaral similarity index for triangle_1
+        (score_ssim, diff) = compare_ssim(window, triangle_1, full=True)
+        scores_ssim_t1.append(score_ssim)
 
-
-    #########################################################################################
-    # calculate the mean square error for triangle_2
-    score_mse = mse(window, triangle_2)
-    scores_mse.append(score_mse)
-
-    if score_mse < thresh_mse_triangle_2:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
-
-    # calculate the structuaral similarity index for triangle_2
-    (score_ssim, diff) = compare_ssim(window, triangle_2, full=True)
-    scores_ssim.append(score_ssim)
-
-    if score_ssim < thresh_ssim_triangle_2:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
+        if score_ssim < thresh_ssim_triangle_1:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
 
 
-    #########################################################################################
-    # calculate the mean square error for circle
-    score_mse = mse(window, circle)
-    scores_mse.append(score_mse)
+        #########################################################################################
+        # calculate the mean square error for triangle_2
+        score_mse = mse(window, triangle_2)
+        scores_mse_t2.append(score_mse)
 
-    if score_mse < thresh_mse_circle:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
+        if score_mse < thresh_mse_triangle_2:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
 
-    # calculate the structuaral similarity index for circle
-    (score_ssim, diff) = compare_ssim(window, circle, full=True)
-    scores_ssim.append(score_ssim)
+        # calculate the structuaral similarity index for triangle_2
+        (score_ssim, diff) = compare_ssim(window, triangle_2, full=True)
+        scores_ssim_t2.append(score_ssim)
 
-    if score_ssim < thresh_ssim_circle:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
-
-
-    #########################################################################################
-    # calculate the mean square error for rectangle
-    score_mse = mse(window, rectangle)
-    scores_mse.append(score_mse)
-
-    if score_mse < thresh_mse_rectangle:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
-
-    # calculate the structuaral similarity index for rectangle
-    (score_ssim, diff) = compare_ssim(window, rectangle, full=True)
-    scores_ssim.append(score_ssim)
-
-    if score_ssim < thresh_ssim_rectangle:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
-
-    #########################################################################################
-    # calculate the mean square error for square
-    score_mse = mse(window, square)
-    scores_mse.append(score_mse)
-
-    if score_mse < thresh_mse_square:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
-
-    # calculate the structuaral similarity index for square
-    (score_ssim, diff) = compare_ssim(window, square, full=True)
-    scores_ssim.append(score_ssim)
-
-    if score_ssim < thresh_ssim_square:
-        minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
-    bbox_list.append([minr, minc, maxr, maxc])
+        if score_ssim < thresh_ssim_triangle_2:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
 
 
-print(bbox_list)
+        #########################################################################################
+        # calculate the mean square error for circle
+        score_mse = mse(window, circle)
+        scores_mse_c.append(score_mse)
 
+        if score_mse < thresh_mse_circle:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+        # calculate the structuaral similarity index for circle
+        (score_ssim, diff) = compare_ssim(window, circle, full=True)
+        scores_ssim_c.append(score_ssim)
+
+        if score_ssim < thresh_ssim_circle:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+
+        #########################################################################################
+        # calculate the mean square error for rectangle
+        score_mse = mse(window, rectangle)
+        scores_mse_r.append(score_mse)
+
+        if score_mse < thresh_mse_rectangle:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+        # calculate the structuaral similarity index for rectangle
+        (score_ssim, diff) = compare_ssim(window, rectangle, full=True)
+        scores_ssim_r.append(score_ssim)
+
+        if score_ssim < thresh_ssim_rectangle:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+        #########################################################################################
+        # calculate the mean square error for square
+        score_mse = mse(window, square)
+        scores_mse_s.append(score_mse)
+
+        if score_mse < thresh_mse_square:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+        # calculate the structuaral similarity index for square
+        (score_ssim, diff) = compare_ssim(window, square, full=True)
+        scores_ssim_s.append(score_ssim)
+
+        if score_ssim < thresh_ssim_square:
+            minr, minc, maxr, maxc = [x, y, x + window.shape[1], y + window.shape[0]]
+            bbox_list.append([minr, minc, maxr, maxc])
+
+
+print(min(scores_ssim_t1))
+print(len(bbox_list))
 
