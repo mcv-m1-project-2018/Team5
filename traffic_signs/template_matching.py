@@ -2,13 +2,16 @@
 
 import os
 import pandas as pd
-from numpy import asarray
+import numpy as np
+from numpy import asarray, argmax
 import matplotlib.pylab as plt
+import matplotlib.patches as mpatches
 
 from scipy import signal
 from scipy import misc
 from PIL import Image
 import utils as ut
+from scipy.signal import correlate2d
 
 
 def calculate_template(data, TRAIN_DIR):
@@ -74,11 +77,17 @@ def calculate_template(data, TRAIN_DIR):
 
     return [resultImage_A, resultImage_B, resultImage_C, resultImage_D, resultImage_E, resultImage_F]
 
+def get_templates():
+    resultImage_A = Image.open('gt/triangle.png')
+    resultImage_B = Image.open('gt/triangle_i.png')
+    resultImage_CDE = Image.open('gt/circle.png')
+    resultImage_F = Image.open('gt/square.png')
+
+    return [resultImage_A, resultImage_B, resultImage_CDE, resultImage_F]
 
 
-def template_matching_candidates(image_dir, candidates, templates, mode="correlation", threshold=0.5):
+def template_matching_candidates(mask, candidates, templates, mode="correlation", threshold=0.5):
     """
-
     :param image_dir: path to the image --> "example/image1.jpg"
     :param candidates: list of masks
     :param templates: list of templates
@@ -90,16 +99,18 @@ def template_matching_candidates(image_dir, candidates, templates, mode="correla
         raise
 
     # Read image
-    img = Image.open(image_dir).convert('LA')
+    img = mask
+    h, w = mask.shape
+    print(mask.shape)
 
     for candidate in candidates:
 
         #print(candidate)
         # Crop image
-        img_crop = img.crop((candidate[1], candidate[0], candidate[3], candidate[2]))
+        #img_crop = img.crop((candidate[1], candidate[0], candidate[3], candidate[2]))
 
         # Match sizes of candidate and templates
-        img_crop = img_crop.resize((90,90))
+        #img_crop = img_crop.resize((90,90))
         #plt.figure()
         #plt.imshow(img_crop)
         #plt.show()
@@ -108,6 +119,7 @@ def template_matching_candidates(image_dir, candidates, templates, mode="correla
         img_crop = (img_crop - img_crop.mean())/img_crop.std()
 
         for template in templates:
+            template = template.resize((h, w))
             template = asarray(template)
             template = template[:,:,0]
             template = (template - template.mean())/template.std()
@@ -122,25 +134,114 @@ def template_matching_candidates(image_dir, candidates, templates, mode="correla
                 print(a)
             # Apply threshold and save classification
 
-
     return 0
+
+
+def template_matching_candidates_2(mask, candidates, templates, mode="subtraction", threshold=0.5):
+    """
+
+    :param image_dir: path to the image --> "example/image1.jpg"
+    :param candidates: list of masks
+    :param templates: list of templates
+    :param mode:
+    :param threshold:
+    :return:
+    """
+    if mode != "correlation" and mode != "subtraction":
+        raise
+
+    filtered_candidates = []
+    #fig, ax = plt.subplots(figsize=(10, 6))
+    #ax.imshow(mask)
+
+    for candidate in candidates:
+        #print(candidate)
+        w = candidate[2] - candidate[0]
+        h = candidate[3] - candidate[1]
+        #print("{},{}".format(h,w))
+
+        img_crop = asarray(mask)
+        img_crop = img_crop[candidate[1]:candidate[3], candidate[0]:candidate[2]]
+        #plt.figure()
+        #plt.imshow(img_crop)
+
+        memoria = 1
+
+        for n, template in enumerate(templates):
+            template = template.resize((w, h))
+            template = asarray(template)/255
+            template = template[:, :]
+            if mode == "correlation":
+                #a = signal.correlate2d(img_crop, template, mode='valid')
+                diff = correlate2d(img_crop, template)/ (h * w)
+                print(np.argmax(diff))
+                if memoria < diff:
+                    memoria = diff
+                    clase = n
+            else:
+                # Subtraction
+                diff = (abs(img_crop - template)).sum() / (h * w)
+                if memoria > diff:
+                    memoria = diff
+                    clase = n
+
+            #print(a)
+            #plt.imshow(template - img_crop)
+            #plt.show()
+            #plt.imshow(diff)
+            #plt.show()
+        """
+        print(memoria)
+        if clase == 0:
+            print("triangulo")
+        if clase == 1:
+            print("triangulo invertido")
+        if clase == 2:
+            print("circulo")
+        if clase == 3:
+            print("rectangulo")
+        """
+        if memoria < 0.23:
+            filtered_candidates.append(candidate)
+
+            """
+            rect = mpatches.Rectangle((candidate[1], candidate[0]), candidate[3] - candidate[1], candidate[2] - candidate[0],
+                                      fill=False, edgecolor='green', linewidth=2)
+            ax.add_patch(rect)
+            """
+
+    #plt.show()
+    return filtered_candidates
 
 
 def template_matching_global(image, templates, mode="correlation", threshold=0.5):
     if mode != "correlation" and mode != "subtraction":
         raise
 
-    # TODO
-    # Create numpy with same size as image
+    bbox_list = []
 
-    # Move image_size - template_size steps
-    """
-    face = misc.face(gray=True) - misc.face(gray=True).mean()
-        template = np.copy(face[300:365, 670:750])  # right eye
-    template -= template.mean()
-    face = face + np.random.randn(*face.shape) * 50  # add noise
-    corr = signal.correlate2d(face, template, boundary='symm', mode='same')
-    y, x = np.unravel_index(np.argmax(corr), corr.shape)  # find the match
-    """
-    return 0
+    # Create numpy with same size as image
+    face = asarray(image)
+    face = face.astype('float64')
+    face = (face - face.mean()) / face.std()
+
+    # size = 60,60
+    # template = templates[5].resize(size)
+    for template in templates:
+        template = asarray(template)
+        template = template.astype('float64')
+        template = (template - template.mean()) / template.std()
+
+        corr = signal.correlate2d(face, template, boundary='symm', mode='same')
+
+        print(max(corr))
+
+        y, x = np.unravel_index(argmax(corr), corr.shape)
+        minr = y - 45
+        minc = x - 45
+        maxr = y - 45
+        maxc = x - 45
+        bbox_list.append([minc, minr, maxc, maxr])
+
+    return bbox_list
 
