@@ -340,7 +340,7 @@ def dist_l1(v1, v2):
 
 
 def dist_chi_squared(v1, v2):
-    return np.sum((v1 - v2)**2 / (v1 + v2))
+    return np.sum((v1 - v2)**2 / (v1 + v2 + 0.00001))
 
 
 def dist_hist_intersection(v1, v2):
@@ -348,4 +348,12 @@ def dist_hist_intersection(v1, v2):
 
 
 def dist_hellinger_kernel(v1, v2):
-    return np.sum(np.sqrt(v1, v2))
+    return np.sum(np.sqrt(v1*v2))
+
+def bbox_to_pkl(list, fname, folder=''):
+
+    fname = fname if fname.endswith('.pkl') else '{fname}.pkl'.format(fname=fname)
+    path = os.path.join(folder, fname)
+
+    with open(path, 'wb') as f:
+        pickle.dump(list, f)
