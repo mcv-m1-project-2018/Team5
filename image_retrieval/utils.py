@@ -336,7 +336,7 @@ def dist_euclidean(v1, v2):
 
 
 def dist_l1(v1, v2):
-    return np.abs(np.sum(v1 - v2))
+    return np.sum(np.abs(v1 - v2))
 
 
 def dist_chi_squared(v1, v2):
@@ -348,4 +348,4 @@ def dist_hist_intersection(v1, v2):
 
 
 def dist_hellinger_kernel(v1, v2):
-    return np.sqrt(v1, v2).sum()
+    return np.sum(np.sqrt(v1, v2))
