@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import utils as ut
 
 # Useful directories
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULT_DIR = os.path.join('results')
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'museum_set_random')
 TRAIN_QUERY_DIR = os.path.join('dataset', 'query_devel_random')
@@ -41,12 +40,12 @@ DISTANCES = {
     'hellinger': ut.dist_hellinger_kernel
 }
 """
-HISTOGRAM_LIST = ['global']
+HISTOGRAM_LIST = ['global', 'block', 'pyramid']
 COLOR_SPACE_LIST = ['hsv']
 DISTANCES = {
-    #'euclidean': ut.dist_euclidean,
-    #'l1': ut.dist_l1,
-    #'chi2': ut.dist_chi_squared,
+    'euclidean': ut.dist_euclidean,
+    'l1': ut.dist_l1,
+    'chi2': ut.dist_chi_squared,
     'histIntersection': ut.dist_hist_intersection,
     'hellinger': ut.dist_hellinger_kernel
 }
@@ -72,7 +71,7 @@ if __name__ == '__main__':
         db_museum = ut.get_db(PICKLE_MUSEUM_DATASET)
 
     if not os.path.exists(PICKLE_QUERY_DATASET):
-        db_query = ut.create_db(TRAIN_QUERY_DIR, PICKLE_QUERY_DATASET)
+        db_query = ut.create_db(TRAIN_QUERY_DIR)
         ut.save_db(db_query, PICKLE_QUERY_DATASET)
     else:
         db_query = ut.get_db(PICKLE_QUERY_DATASET)
@@ -95,7 +94,12 @@ if __name__ == '__main__':
             for dist_func in DISTANCES:
                 fun = DISTANCES[dist_func]
                 list_of_lists = []
+                query_gt_list = []
+                query_list = []
+
                 for query in db_query:
+                    query_list.append(query)
+                    query_gt_list.append([gt[query]])
                     h0, h1, h2 = db_query[query][hist_type][space_color]['hist']
                     query_h = np.concatenate([h0, h1, h2])
                     result_list = []
@@ -105,17 +109,22 @@ if __name__ == '__main__':
                         metric = fun(query_h, image_h)
                         result_list.append((metric, image))
 
-                    # TODO: if para sentido ascendente o descendente
-                    result_list.sort(key=lambda tup: tup[0], reverse=True)
+                    if dist_func == "hellinger" or dist_func == "histIntersection":
+                        result_list.sort(key=lambda tup: tup[0], reverse=True)
+                    else:
+                        result_list.sort(key=lambda tup: tup[0], reverse=False)
+
+
                     result_list = [x[1] for x in result_list[:K]]
                     list_of_lists.append(result_list)
+
 
                 # Guardar lista
                 print(list_of_lists)
 
                 # Calcular mAP
+                mAP = ut.mapk(query_gt_list, list_of_lists, k=K)
+                mAP_text = "{0:.2f}".format(mAP)
 
                 # Exportar pkl
-                ut.bbox_to_pkl(list_of_lists, "mAP_{}_{}_{}.pkl".format(hist_type, space_color, dist_func),folder="pkl")
-
-
+                ut.bbox_to_pkl(list_of_lists, "{}_{}_{}_{}.pkl".format(mAP_text, hist_type, space_color, dist_func), folder="pkl")
