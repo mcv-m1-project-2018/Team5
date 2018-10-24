@@ -34,7 +34,17 @@ METHOD_NUMBER = 1
 METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMBER))
 
 
-# Flags
+### Flags
+K = 10
+# Distances
+EUCLIDEAN_DISTANCE = False
+L1_DISTANCE = False
+CHI_2 = False
+HISTOGRAM_INTERSECTION = False
+HELLINGER_KERNEL = False
+# Evaluate
+EVALUATE_MAP = False
+EXPORT_PKL = False
 
 # Global variables
 
@@ -80,6 +90,7 @@ if __name__ == '__main__':
         # plt.imshow(r)
         # plt.show()
         # break
+
 
     print("Museum database with {} elements".format(len(db_museum)))
     print("Query database with {} elements".format(len(db_query)))
