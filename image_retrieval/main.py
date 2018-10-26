@@ -5,10 +5,7 @@ import logging
 import os
 
 # 3rd party modules
-import pickle
-
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Local modules
 import utils as ut
@@ -50,7 +47,6 @@ DISTANCES = {
     'hellinger': ut.dist_hellinger_kernel
 }
 
-
 # Global variables
 
 # Logger setup
@@ -63,6 +59,8 @@ logger = logging.getLogger(__name__)
 
 
 if __name__ == '__main__':
+
+    logger.info("START")
 
     if not os.path.exists(PICKLE_MUSEUM_DATASET):
         logger.info("Creating pickle database for museum dataset...")
@@ -77,8 +75,10 @@ if __name__ == '__main__':
         db_query = ut.create_db(TRAIN_QUERY_DIR)
         ut.save_db(db_query, PICKLE_QUERY_DATASET)
     else:
-        logger.info("Reading pickle database for museum dataset...")
+        logger.info("Reading pickle database for query dataset...")
         db_query = ut.get_db(PICKLE_QUERY_DATASET)
+
+    logger.info("LOADED DATA")
 
     print("Museum database with {} elements".format(len(db_museum)))
     print("Query database with {} elements".format(len(db_query)))
@@ -107,6 +107,7 @@ if __name__ == '__main__':
                     query_list.append(query)
                     query_gt_list.append([gt[query]])
                     query_h = db_query[query][hist_type][space_color]
+                    logger.info("{}-{}-{}-{}".format(query, hist_type, space_color, dist_func))
                     result_list = []
                     for image in db_museum:
                         image_h = db_museum[image][hist_type][space_color]
@@ -126,9 +127,10 @@ if __name__ == '__main__':
 
                 # Calcular mAP
                 mAP = ut.mapk(query_gt_list, list_of_lists, k=K)
-                mAP_text = "{0:.2f}".format(mAP)
 
                 # Exportar pkl
+                mAP_text = "{0:.2f}".format(mAP)
+
                 ut.bbox_to_pkl(
                     list_of_lists,
                     "{}_{}_{}_{}.pkl".format(mAP_text, hist_type, space_color, dist_func),
