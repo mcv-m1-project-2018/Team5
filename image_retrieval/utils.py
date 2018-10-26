@@ -236,7 +236,7 @@ def get_histograms_for_color_spaces(img):
     # data['ycbcr'] = {
     #     'hist': np.concatenate(hist)
     # }
-
+    #
     # lab = rgb2lab(img)
     # hist, _ = histogram(lab)
     # data['lab'] = {
@@ -316,8 +316,8 @@ def create_db(imgs_dir, blocks_x=4, blocks_y=4, level=4):
         logger.debug("Info of image '%s' saved (%.3f s)." % (f, (time.time() - t0)))
 
         counter += 1
-        if counter == 10:
-            break
+        #if counter == 10:
+        #    break
     return db
 
 
