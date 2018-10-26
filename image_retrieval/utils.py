@@ -2,11 +2,12 @@
 
 # Built-in modules
 import logging
+import math
 import os
-
-# 3rd party modules
 import time
 
+# 3rd party modules
+import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
@@ -153,7 +154,7 @@ def save_image(img, directory, name, ext='png'):
     return filename, directory
 
 
-def histogram(im_array, bins=256):
+def histogram(im_array, bins=128):
     """
     This function returns the centers of bins and does not rebin integer arrays. For integer arrays,
     each integer value has its own bin, which improves speed and intensity-resolution.
@@ -199,49 +200,48 @@ def split_image(im_array, x_div, y_div):
 
     if im_array.shape[0] < y_div or im_array.shape[1] < x_div:
         raise ValueError("x_div or y_div can't exceed the size of the image")
+
+    y_step = math.ceil(im_array.shape[0] / y_div)
+    x_step = math.ceil(im_array.shape[1] / x_div)
     if len(im_array.shape) == 3:
         return [
-            im_array[y:y + y_div, x:x + x_div, :]
-            for y in range(0, im_array.shape[0], y_div)
-            for x in range(0, im_array.shape[1], x_div)
+            im_array[y:y + y_step, x:x + x_step, :]
+            for y in range(0, im_array.shape[0], y_step)
+            for x in range(0, im_array.shape[1], x_step)
         ]
     else:
         return [
-            im_array[y:y + y_div, x:x + x_div]
-            for y in range(0, im_array.shape[0], y_div)
-            for x in range(0, im_array.shape[1], x_div)
+            im_array[y:y + y_step, x:x + x_step]
+            for y in range(0, im_array.shape[0], y_step)
+            for x in range(0, im_array.shape[1], x_step)
         ]
 
 
 def get_histograms_for_color_spaces(img):
     data = dict()
 
-    hist, bin_centers = histogram(img)
+    hist, _ = histogram(img)
     data['rgb'] = {
-        'hist': hist,
-        'bin_centers': bin_centers
+        'hist': np.concatenate(hist)
     }
 
     hsv = rgb2hsv(img)
-    hist, bin_centers = histogram(hsv)
+    hist, _ = histogram(hsv)
     data['hsv'] = {
-        'hist': hist,
-        'bin_centers': bin_centers
+        'hist': np.concatenate(hist)
     }
 
-    ycbcr = rgb2ycbcr(img)
-    hist, bin_centers = histogram(ycbcr)
-    data['ycbcr'] = {
-        'hist': hist,
-        'bin_centers': bin_centers
-    }
+    # ycbcr = rgb2ycbcr(img)
+    # hist, _ = histogram(ycbcr)
+    # data['ycbcr'] = {
+    #     'hist': np.concatenate(hist)
+    # }
 
-    lab = rgb2lab(img)
-    hist, bin_centers = histogram(lab)
-    data['lab'] = {
-        'hist': hist,
-        'bin_centers': bin_centers
-    }
+    # lab = rgb2lab(img)
+    # hist, _ = histogram(lab)
+    # data['lab'] = {
+    #     'hist': np.concatenate(hist)
+    # }
 
     return data
 
@@ -265,17 +265,25 @@ def create_db(imgs_dir, blocks_x=4, blocks_y=4, level=4):
     :return: Dictionary with the database
     """
 
-    _color_spaces = ['rgb', 'hsv', 'ycbcr', 'lab']
+    # _color_spaces = ['rgb', 'hsv', 'ycbcr', 'lab']
+    _color_spaces = ['rgb', 'hsv']
     db = dict()
 
+    counter = 0
     for f in get_files_from_dir(imgs_dir):
         t0 = time.time()
         data = dict()
 
         img = get_img(imgs_dir, f)
+        img = resize(img)
 
         # Get data for Global Color Histogram
-        global_hists = get_histograms_for_color_spaces(img)
+        # global_hists = get_histograms_for_color_spaces(img)
+        global_hists = {k: list() for k in _color_spaces}
+        hists = get_histograms_for_color_spaces(img)
+        for k in global_hists.keys():
+            global_hists[k].extend(hists[k]['hist'])
+
         data['global'] = global_hists
 
         # Get data for Block-based Histogram
@@ -286,20 +294,19 @@ def create_db(imgs_dir, blocks_x=4, blocks_y=4, level=4):
             hists = get_histograms_for_color_spaces(block)
             # Append each histogram to the corresponding color space
             for k in block_hists.keys():
-                block_hists[k].append(hists[k]['hist'])
+                block_hists[k].extend(hists[k]['hist'])
 
         data['block'] = block_hists
 
         # Get data for Spatial Pyramid Representation
         # Create auxiliary dictionary to store concatenated histograms for each color space
-        level_hists = dict()
+        level_hists = {k: list() for k in _color_spaces}
         for l in range(1, level+1):
-            level_hists[l] = {k: list() for k in _color_spaces}
-            for sub_img in split_image(img, img.shape[1] // l**2, img.shape[0] // l**2):
+            for sub_img in split_image(img, l**2, l**2):
                 hists = get_histograms_for_color_spaces(sub_img)
                 # Append each histogram to the corresponding color space
-                for k in level_hists[l].keys():
-                    level_hists[l][k].append(hists[k]['hist'])
+                for k in level_hists.keys():
+                    level_hists[k].extend(hists[k]['hist'])
 
         data['pyramid'] = level_hists
 
@@ -308,8 +315,9 @@ def create_db(imgs_dir, blocks_x=4, blocks_y=4, level=4):
         print("Info of image '%s' saved (%.3f s)." % (f, (time.time() - t0)))
         logger.debug("Info of image '%s' saved (%.3f s)." % (f, (time.time() - t0)))
 
-        break
-
+        counter += 1
+        if counter == 10:
+            break
     return db
 
 
@@ -352,13 +360,18 @@ def dist_hist_intersection(v1, v2):
 def dist_hellinger_kernel(v1, v2):
     return np.sum(np.sqrt(v1*v2))
 
+
 def bbox_to_pkl(list, fname, folder=''):
+
+    if not os.path.exists(folder):
+        os.mkdir(folder)
 
     fname = fname if fname.endswith('.pkl') else '{fname}.pkl'.format(fname=fname)
     path = os.path.join(folder, fname)
 
     with open(path, 'wb') as f:
         pickle.dump(list, f)
+
 
 def apk(actual, predicted, k=10):
     """
@@ -378,13 +391,14 @@ def apk(actual, predicted, k=10):
     score : double
             The average precision at k over the input lists
     """
-    if len(predicted)>k:
+
+    if k < len(predicted):
         predicted = predicted[:k]
 
     score = 0.0
     num_hits = 0.0
 
-    for i,p in enumerate(predicted):
+    for i, p in enumerate(predicted):
         if p in actual and p not in predicted[:i]:
             num_hits += 1.0
             score += num_hits / (i+1.0)
@@ -393,6 +407,7 @@ def apk(actual, predicted, k=10):
         return 0.0
 
     return score / min(len(actual), k)
+
 
 def mapk(actual, predicted, k=10):
     """
@@ -414,4 +429,16 @@ def mapk(actual, predicted, k=10):
     score : double
             The mean average precision at k over the input lists
     """
-    return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
+    return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
+
+
+def plot_images(imgs):
+    if not isinstance(imgs, list):
+        imgs = [imgs]
+
+    for idx, img in enumerate(imgs):
+        plt.figure()
+        plt.title("Figure %.2d" % idx)
+        plt.imshow(img)
+
+    plt.show()
