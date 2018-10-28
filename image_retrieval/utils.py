@@ -186,7 +186,7 @@ def resize(im_array, width=512, height=512):
     :return: Resized image
     """
 
-    return transform.resize(im_array, (height, width), anti_aliasing=True)
+    return transform.resize(im_array, (height, width), anti_aliasing=False)
 
 
 def split_image(im_array, x_div, y_div):
@@ -231,17 +231,17 @@ def get_histograms_for_color_spaces(img):
         'hist': np.concatenate(hist)
     }
 
-    # ycbcr = rgb2ycbcr(img)
-    # hist, _ = histogram(ycbcr)
-    # data['ycbcr'] = {
-    #     'hist': np.concatenate(hist)
-    # }
-    #
-    # lab = rgb2lab(img)
-    # hist, _ = histogram(lab)
-    # data['lab'] = {
-    #     'hist': np.concatenate(hist)
-    # }
+    ycbcr = rgb2ycbcr(img)
+    hist, _ = histogram(ycbcr)
+    data['ycbcr'] = {
+        'hist': np.concatenate(hist)
+    }
+
+    lab = rgb2lab(img)
+    hist, _ = histogram(lab)
+    data['lab'] = {
+        'hist': np.concatenate(hist)
+    }
 
     return data
 
@@ -265,12 +265,14 @@ def create_db(imgs_dir, blocks_x=4, blocks_y=4, level=4):
     :return: Dictionary with the database
     """
 
-    # _color_spaces = ['rgb', 'hsv', 'ycbcr', 'lab']
-    _color_spaces = ['rgb', 'hsv']
+    _color_spaces = ['rgb', 'hsv', 'ycbcr', 'lab']
     db = dict()
 
     counter = 0
     for f in get_files_from_dir(imgs_dir):
+        if f == ".DS_Store":
+            continue
+
         t0 = time.time()
         data = dict()
 
