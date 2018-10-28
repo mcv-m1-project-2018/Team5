@@ -13,7 +13,7 @@ import utils as ut
 # Useful directories
 RESULT_DIR = os.path.join('pkl')
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'museum_set_random')
-TRAIN_QUERY_DIR = os.path.join('dataset', 'query_devel_random')
+TRAIN_QUERY_DIR = os.path.join('dataset', 'query_test_random')
 
 # Pickle filename with the training data
 PICKLE_MUSEUM_DATASET = 'train_museum.pkl'
@@ -26,7 +26,6 @@ METHOD_DIR = os.path.join(RESULT_DIR, 'method{number}'.format(number=METHOD_NUMB
 
 # Flags
 K = 10
-"""
 HISTOGRAM_LIST = ['global','block','pyramid']
 COLOR_SPACE_LIST = ['rgb','hsv','ycbcr','lab']
 DISTANCES = {
@@ -36,16 +35,7 @@ DISTANCES = {
     'histIntersection': ut.dist_hist_intersection,
     'hellinger': ut.dist_hellinger_kernel
 }
-"""
-HISTOGRAM_LIST = ['global', 'block', 'pyramid']
-COLOR_SPACE_LIST = ['hsv']
-DISTANCES = {
-    'euclidean': ut.dist_euclidean,
-    'l1': ut.dist_l1,
-    'chi2': ut.dist_chi_squared,
-    'histIntersection': ut.dist_hist_intersection,
-    'hellinger': ut.dist_hellinger_kernel
-}
+
 
 # Global variables
 
@@ -82,7 +72,7 @@ if __name__ == '__main__':
 
     print("Museum database with {} elements".format(len(db_museum)))
     print("Query database with {} elements".format(len(db_query)))
-    gt = {
+    gt_train = {
         "ima_000000.jpg": "ima_000076.jpg", "ima_000001.jpg": "ima_000105.jpg", "ima_000002.jpg": "ima_000034.jpg",
         "ima_000003.jpg": "ima_000083.jpg", "ima_000004.jpg": "ima_000109.jpg", "ima_000005.jpg": "ima_000101.jpg",
         "ima_000006.jpg": "ima_000057.jpg", "ima_000007.jpg": "ima_000027.jpg", "ima_000008.jpg": "ima_000050.jpg",
@@ -93,6 +83,19 @@ if __name__ == '__main__':
         "ima_000021.jpg": "ima_000022.jpg", "ima_000022.jpg": "ima_000087.jpg", "ima_000023.jpg": "ima_000085.jpg",
         "ima_000024.jpg": "ima_000013.jpg", "ima_000025.jpg": "ima_000039.jpg", "ima_000026.jpg": "ima_000103.jpg",
         "ima_000027.jpg": "ima_000006.jpg", "ima_000028.jpg": "ima_000062.jpg", "ima_000029.jpg": "ima_000041.jpg"
+    }
+
+    gt_test = {
+        "ima_000000.jpg": "ima_000030.jpg", "ima_000001.jpg": "ima_000102.jpg", "ima_000002.jpg": "ima_000100.jpg",
+        "ima_000003.jpg": "ima_000094.jpg", "ima_000004.jpg": "ima_000056.jpg", "ima_000005.jpg": "ima_000010.jpg",
+        "ima_000006.jpg": "ima_000101.jpg", "ima_000007.jpg": "ima_000000.jpg", "ima_000008.jpg": "ima_000107.jpg",
+        "ima_000009.jpg": "ima_000082.jpg", "ima_000010.jpg": "ima_000108.jpg", "ima_000011.jpg": "ima_000106.jpg",
+        "ima_000012.jpg": "ima_000012.jpg", "ima_000013.jpg": "ima_000078.jpg", "ima_000014.jpg": "ima_000063.jpg",
+        "ima_000015.jpg": "ima_000097.jpg", "ima_000016.jpg": "ima_000034.jpg", "ima_000017.jpg": "ima_000047.jpg",
+        "ima_000018.jpg": "ima_000021.jpg", "ima_000019.jpg": "ima_000015.jpg", "ima_000020.jpg": "ima_000068.jpg",
+        "ima_000021.jpg": "ima_000046.jpg", "ima_000022.jpg": "ima_000026.jpg", "ima_000023.jpg": "ima_000032.jpg",
+        "ima_000024.jpg": "ima_000075.jpg", "ima_000025.jpg": "ima_000019.jpg", "ima_000026.jpg": "ima_000057.jpg",
+        "ima_000027.jpg": "ima_000098.jpg", "ima_000028.jpg": "ima_000093.jpg", "ima_000029.jpg": "ima_000020.jpg"
     }
 
     for hist_type in HISTOGRAM_LIST:
@@ -122,17 +125,23 @@ if __name__ == '__main__':
                     result_list = [x[1] for x in result_list[:K]]
                     list_of_lists.append(result_list)
 
-                # Guardar lista
-                print(list_of_lists)
+                # print(list_of_lists)
 
                 # Calcular mAP
                 mAP = ut.mapk(query_gt_list, list_of_lists, k=K)
 
                 # Exportar pkl
-                mAP_text = "{0:.2f}".format(mAP)
+                mAP_text = "{0:.3f}".format(mAP)
 
                 ut.bbox_to_pkl(
                     list_of_lists,
                     "{}_{}_{}_{}.pkl".format(mAP_text, hist_type, space_color, dist_func),
+                    folder=RESULT_DIR
+                )
+
+                # print(query_list)
+                ut.bbox_to_pkl(
+                    query_list,
+                    "query_list.pkl",
                     folder=RESULT_DIR
                 )
