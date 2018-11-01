@@ -138,6 +138,9 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8)):
     return feature.hog(image, orientations=orientations, pixels_per_cell=pixels_per_cell,
                        visualise=False, feature_vector=True)
 
+######
+# ORB:
+######
 
 # img1 = cv.imread('../dataset/query_devel_W4/ima_000007.jpg',0)          # queryImage
 # img2 = cv.imread('../dataset/BBDD_W4/ima_000035.jpg',0)                 # trainImage
@@ -166,8 +169,38 @@ def compute_orb_descriptors(des1, des2, n_matches, thresh):
         dist.append(m.distance)
 
     sqrt_sum = np.sum(np.array(dist)**2) / n_matches
-
     return sqrt_sum <= thresh
-    
+
+########
+# SIFT:
+########
+
+#img1 = cv.imread('../dataset/query_devel_W4/ima_000005.jpg',0)          # queryImage
+#img2 = cv.imread('../dataset/BBDD_W4/ima_000099.jpg',0)                 # trainImage
+
+# Initiate SIFT detector
+#sift = cv.xfeatures2d.SIFT_create(10000)
+
+# find the keypoints and descriptors with SIFT
+#kp1, des1 = sift.detectAndCompute(img1,None)
+#kp2, des2 = sift.detectAndCompute(img2,None)
+
+def compute_sift_descriptor(des1, des2, metric, thresh):
+
+    # Result: compute_sift_descriptor(des1, des2, 0.5, 50)
+    # Metric < 0.5, 30 < Threshold < 100 
+
+    # BFMatcher with default params
+    bf = cv.BFMatcher()
+    matches = bf.knnMatch(des1,des2, k=2)
+
+    # Apply ratio test
+    good = []
+    for m,n in matches:
+        if m.distance < metric*n.distance:
+            good.append([m])
+            
+    return(len(good)>thresh)
+
 
 
