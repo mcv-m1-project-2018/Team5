@@ -5,7 +5,7 @@
 # 3rd party modules
 import numpy as np
 from skimage import feature, color
-import cv2
+import cv2 as cv
 
 
 def normalize(array):
@@ -13,10 +13,19 @@ def normalize(array):
     Normalize a N-dimensional vector.
 
     :param array: Vector
-    :return: Normlized vector
+    :return: Normalized vector
     """
     return array / np.sqrt(np.sum(array**2))
 
+def orb(image):
+    """
+
+    :param image:
+    :return:
+    """
+    orb = cv.ORB_create()
+    _ , des = orb.detectAndCompute(image, None)
+    return des
 
 def harris(image, sigma=1):
     """
@@ -143,8 +152,8 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8)):
 def compute_orb_descriptors(des1, des2, n_matches, thresh):
 
     #result = compute_orb_descriptors(des1, des2, 10, 500)
-    # 500 < Threshold < 1000 
-    
+    # 500 < Threshold < 1000
+
     # create BFMatcher object
     bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
     # Match descriptors.
@@ -157,7 +166,7 @@ def compute_orb_descriptors(des1, des2, n_matches, thresh):
         dist.append(m.distance)
 
     sqrt_sum = np.sum(np.array(dist)**2) / n_matches
-    
+
     return sqrt_sum <= thresh
     
 

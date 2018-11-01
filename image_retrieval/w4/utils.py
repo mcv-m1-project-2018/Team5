@@ -8,34 +8,22 @@ import time
 
 # 3rd party modules
 import imageio
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import cv2
 
 from skimage import color, exposure, transform
 
 # Local modules
-from image_retrieval.w4 import features as feat
+import features as feat
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-
-FEATURES = {
-    'harris': feat.harris,
-    'log': feat.lap_of_gauss,
-    'dog': feat.dif_of_gauss,
-    'doh': feat.det_of_hessi,
-    'sift': feat.sift,
-    'surf': feat.surf,
-    'daisy': feat.daisy,
-    'lbp': feat.lbp,
-    'hog': feat.hog
-}
-
 # Logger setup
 logging.basicConfig(
-    # level=logging.DEBUG,
-    level=logging.INFO,
+    level=logging.DEBUG,
+    # level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
@@ -123,7 +111,8 @@ def get_img(folder_dir, img_dir):
     img_path = os.path.join(folder_dir, img_dir)
     logger.debug("Getting image '{path}'".format(path=img_path))
 
-    return imageio.imread(img_path)
+    #return imageio.imread(img_path)
+    return cv2.imread(img_path)
 
 
 def get_patch(img, x_min, y_min, x_max, y_max):
@@ -240,28 +229,28 @@ def get_histograms_for_color_spaces(img):
         'hist': np.concatenate(hist)
     }
 
-    hsv = rgb2hsv(img)
-    hist, _ = histogram(hsv)
-    data['hsv'] = {
-        'hist': np.concatenate(hist)
-    }
-
-    ycbcr = rgb2ycbcr(img)
-    hist, _ = histogram(ycbcr)
-    data['ycbcr'] = {
-        'hist': np.concatenate(hist)
-    }
-
-    lab = rgb2lab(img)
-    hist, _ = histogram(lab)
-    data['lab'] = {
-        'hist': np.concatenate(hist)
-    }
+    # hsv = rgb2hsv(img)
+    # hist, _ = histogram(hsv)
+    # data['hsv'] = {
+    #     'hist': np.concatenate(hist)
+    # }
+    #
+    # ycbcr = rgb2ycbcr(img)
+    # hist, _ = histogram(ycbcr)
+    # data['ycbcr'] = {
+    #     'hist': np.concatenate(hist)
+    # }
+    #
+    # lab = rgb2lab(img)
+    # hist, _ = histogram(lab)
+    # data['lab'] = {
+    #     'hist': np.concatenate(hist)
+    # }
 
     return data
 
 
-def create_db(imgs_dir):
+def create_db(imgs_dir, FEATURES):
     """
     Create a database from images in a directory. The database is a dictionary of the form
 
@@ -277,15 +266,15 @@ def create_db(imgs_dir):
     :return: Dictionary with the database
     """
 
-    _features = ['harris', 'log', 'dog', 'doh', 'sift', 'surf', 'daisy', 'lbp', 'hog']
     db = dict()
 
     for f in get_files_from_dir(imgs_dir, excl_ext=['DS_Store']):
+        logger.debug(f)
         t0 = time.time()
         data = dict()
 
         img = get_img(imgs_dir, f)
-        img = resize(img)
+        # img = resize(img)
 
         # Compute the different feature descriptors for the image
         for feat_name, feat_func in FEATURES.items():
