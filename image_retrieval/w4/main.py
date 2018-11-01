@@ -33,7 +33,7 @@ K = 10
 COLOR_SPACE_LIST = ['rgb']
 FEATURES = {
     'orb': feat.orb,
-    # 'sift': feat.sift,
+    'sift': feat.sift,
     # 'surf': feat.surf,
 
 
@@ -105,8 +105,8 @@ if __name__ == '__main__':
                     image_h = db_museum[image][feature_function]
                     if feature_function == 'orb':
                         metric = feat.compute_orb_descriptors(query_h, image_h, 10, 500)
-                    # if SIFT
-
+                    if feature_function == 'sift':
+                        metric = feat.compute_sift_descriptor(query_h, image_h, 0.5, 50)
 
                     # if SURF
 
