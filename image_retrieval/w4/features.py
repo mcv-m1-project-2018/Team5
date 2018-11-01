@@ -5,6 +5,7 @@
 # 3rd party modules
 import numpy as np
 from skimage import feature, color
+import cv2
 
 
 def normalize(array):
@@ -127,3 +128,37 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8)):
 
     return feature.hog(image, orientations=orientations, pixels_per_cell=pixels_per_cell,
                        visualise=False, feature_vector=True)
+
+
+# img1 = cv.imread('../dataset/query_devel_W4/ima_000007.jpg',0)          # queryImage
+# img2 = cv.imread('../dataset/BBDD_W4/ima_000035.jpg',0)                 # trainImage
+
+# Initiate ORB detector
+#orb = cv.ORB_create()
+
+# find the keypoints and descriptors with ORB
+#kp1, des1 = orb.detectAndCompute(img1,None)
+#kp2, des2 = orb.detectAndCompute(img2,None)
+
+def compute_orb_descriptors(des1, des2, n_matches, thresh):
+
+    #result = compute_orb_descriptors(des1, des2, 10, 500)
+    # 500 < Threshold < 1000 
+    
+    # create BFMatcher object
+    bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+    # Match descriptors.
+    matches = bf.match(des1,des2)
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    dist = []
+    for m in matches[:n_matches]:
+        dist.append(m.distance)
+
+    sqrt_sum = np.sum(np.array(dist)**2) / n_matches
+    
+    return sqrt_sum <= thresh
+    
+
+
