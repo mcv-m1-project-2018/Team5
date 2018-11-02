@@ -201,4 +201,34 @@ def compute_sift_descriptor(des1, des2, metric, thresh):
     return(len(good)>thresh)
 
 
+########
+# SURF:
+########
+
+#img1 = cv.imread('../dataset/query_devel_W4/ima_000005.jpg',0)          # queryImage
+#img2 = cv.imread('../dataset/BBDD_W4/ima_000099.jpg',0)                 # trainImage
+
+# Initiate SIFT detector
+#surf = cv.xfeatures2d.SURF_create(5000)
+
+# find the keypoints and descriptors with SURF
+#kp1, des1 = surf.detectAndCompute(img1,None)
+#kp2, des2 = surf.detectAndCompute(img2,None)
+
+def compute_surf_descriptor(des1, des2, metric, thresh):
+
+    # Result: compute_sift_descriptor(des1, des2, 0.5, 5)
+    # Metric < 0.5, Threshold NOT SO GOOD! The ratio algorith may not be the best... 
+
+    # BFMatcher with default params
+    bf = cv.BFMatcher()
+    matches = bf.knnMatch(des1,des2, k=2)
+
+    # Apply ratio test
+    good = []
+    for m,n in matches:
+        if m.distance < metric*n.distance:
+            good.append([m])
+            
+    return(len(good)>=thresh)
 
