@@ -93,11 +93,17 @@ def sift(image):
     sift = cv.xfeatures2d.SIFT_create(10000)
 
     # find the keypoints and descriptors with SIFT
-    _ , des = sift.detectAndCompute(image, None)
-    return des
+    _ , descriptors = sift.detectAndCompute(image, None)
+    return descriptors
 
 def surf(image):
-    pass
+
+    # Initiate SIFT detector
+    surf = cv.xfeatures2d.SURF_create(5000)
+
+    # find the keypoints and descriptors with SURF
+    _ , descriptors = surf.detectAndCompute(image,None)
+    return descriptors
 
 
 def daisy(image):

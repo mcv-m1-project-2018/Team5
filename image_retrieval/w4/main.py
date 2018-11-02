@@ -34,7 +34,7 @@ COLOR_SPACE_LIST = ['rgb']
 FEATURES = {
     'orb': feat.orb,
     'sift': feat.sift,
-    # 'surf': feat.surf,
+    'surf': feat.surf
 
 
     #'harris': feat.harris,
@@ -93,6 +93,7 @@ if __name__ == '__main__':
 
     for space_color in COLOR_SPACE_LIST:
         for feature_function in FEATURES:
+            logger.info(feature_function)
             func = FEATURES[feature_function]
             total_list = []
 
@@ -104,11 +105,11 @@ if __name__ == '__main__':
                 for image in db_museum:
                     image_h = db_museum[image][feature_function]
                     if feature_function == 'orb':
-                        metric = feat.compute_orb_descriptors(query_h, image_h, 10, 500)
+                        metric = feat.compute_orb_descriptors(query_h, image_h, 10, 800)
                     if feature_function == 'sift':
                         metric = feat.compute_sift_descriptor(query_h, image_h, 0.5, 50)
-
-                    # if SURF
+                    if feature_function == 'surf':
+                        metric = feat.compute_surf_descriptor(query_h, image_h, 0.5, 5)
 
                     if metric:
                         query_list.append(int(image.split("_")[1].split(".")[0]))
@@ -122,66 +123,18 @@ if __name__ == '__main__':
                 #print(total_list)
 
 
-        total_list.sort()
-        logger.info(total_list)
+            total_list.sort()
+            logger.info(total_list)
 
-        result_list = [x[1] for x in total_list]
-        logger.info(result_list)
+            result_list = [x[1] for x in total_list]
+            logger.info(result_list)
 
-        mAP = ut.mapk(gt, result_list, k=K)
-        logger.info(mAP)
+            mAP = ut.mapk(gt, result_list, k=K)
+            logger.info(mAP)
 
-        mAP_text = "{0:.3f}".format(mAP)
-        ut.bbox_to_pkl(
-            result_list,
-            "{}_{}_{}.pkl".format(mAP_text, space_color, feature_function),
-            folder=RESULT_DIR
-        )
-
-
-# for space_color in COLOR_SPACE_LIST:
-    #     for dist_func in FEATURES:
-    #         fun = FEATURES[dist_func]
-    #         list_of_lists = []
-    #         query_gt_list = []
-    #         query_list = []
-    #
-    #         for query in db_query:
-    #             query_list.append(query)
-    #             query_gt_list.append([gt[query]])
-    #             query_h = db_query[query][hist_type][space_color]
-    #             logger.info("{}-{}-{}-{}".format(query, hist_type, space_color, dist_func))
-    #             result_list = []
-    #             for image in db_museum:
-    #                 image_h = db_museum[image][hist_type][space_color]
-    #                 metric = fun(np.array(query_h), np.array(image_h))
-    #                 result_list.append((metric, image))
-    #
-    #             if dist_func == "hellinger" or dist_func == "histIntersection":
-    #                 result_list.sort(key=lambda tup: tup[0], reverse=True)
-    #             else:
-    #                 result_list.sort(key=lambda tup: tup[0], reverse=False)
-    #
-    #             result_list = [x[1] for x in result_list[:K]]
-    #             list_of_lists.append(result_list)
-    #
-    #         # print(list_of_lists)
-    #
-    #         # Calcular mAP
-    #         mAP = ut.mapk(query_gt_list, list_of_lists, k=K)
-    #
-    #         # Exportar pkl
-    #         mAP_text = "{0:.3f}".format(mAP)
-    #
-    #         ut.bbox_to_pkl(
-    #             list_of_lists,
-    #             "{}_{}_{}_{}.pkl".format(mAP_text, hist_type, space_color, dist_func),
-    #             folder=RESULT_DIR
-    #         )
-    #
-    #         # print(query_list)
-    #         ut.bbox_to_pkl(
-    #             query_list,
-    #             "query_list.pkl",
-    #             folder=RESULT_DIR
-    #         )
+            mAP_text = "{0:.3f}".format(mAP)
+            ut.bbox_to_pkl(
+                result_list,
+                "{}_{}_{}.pkl".format(mAP_text, space_color, feature_function),
+                folder=RESULT_DIR
+            )
