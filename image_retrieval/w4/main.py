@@ -24,19 +24,22 @@ PICKLE_QUERY_DATASET = 'train_query.pkl'
 
 # Global variables
 K = 10
-COLOR_SPACE_LIST = ['rgb']
+COLOR_SPACE_LIST = ['rgb', 'hsv']
 FEATURES = {
-    'orb': feat.orb,
-    # 'sift': feat.sift,
+    # 'orb': feat.orb,
+    'sift': feat.sift,
     # 'surf': feat.surf,
-    # 'harris': feat.harris,
-    # 'log': feat.lap_of_gauss,
-    # 'dog': feat.dif_of_gauss,
-    # 'doh': feat.det_of_hessi,
-    # 'daisy': feat.daisy,
-    # 'lbp': feat.lbp
-    # 'hog': feat.hog
+    # 'hog': feat.hog,
 }
+# Orb: VAL_1 = 10 y VAL_2 = 500 y 1000
+# VAL_1 = 10
+# VAL_2 = 500
+# SIFT: VAL_1 = 0.5 y VAL_2 = 50 y 100
+VAL_1 = 0.5
+VAL_2 = 50
+# SURF: VAL_1 = 0.5 y VAL_2 = 5 y 10
+# VAL_1 = 0.5
+# VAL_2 = 5
 
 # Logger setup
 logging.basicConfig(
@@ -101,11 +104,11 @@ if __name__ == '__main__':
                 for image in db_museum:
                     image_feats = db_museum[image][feat_func]
                     if feat_func == 'orb':
-                        match = feat.compute_orb_descriptors(query_feats, image_feats, 10, 500)
-                    # if SIFT
-
-
-                    # if SURF
+                        match = feat.compute_orb_descriptors(query_feats, image_feats, VAL_1, VAL_2)
+                    if feat_func == 'sift':
+                        metric = feat.compute_sift_descriptor(query_feats, image_feats, VAL_1, VAL_2)
+                    if feat_func == 'surf':
+                        metric = feat.compute_surf_descriptor(query_feats, image_feats, VAL_1, VAL_2)
 
                     # If the descriptors of the train image matches with those from the query
                     # image, add the train image value to the list
@@ -113,75 +116,32 @@ if __name__ == '__main__':
                         query_pred.append(ut.get_number_from_filename(image))
                         logger.info("Success --> Query:{} ----- GT:{}".format(query, image))
 
+                if not match:
+                    logger.info("No matches found for {}".format(query))
                 # If no success images found
                 if len(query_pred) == 0:
                     query_pred.append(-1)
 
                 pred.append([ut.get_number_from_filename(query), query_pred])
 
-        # Sort predicted values for the query images
-        pred.sort(key=lambda x: x[0])
-        logger.info('Predicted values: {}'.format(pred))
+            # Sort predicted values for the query images
+            pred.sort(key=lambda x: x[0])
+            logger.info('Predicted values: {}'.format(pred))
 
-        # Get only values
-        result_list = [x[1] for x in pred]
-        logger.info('Values: {}'.format(result_list))
+            # Get only values
+            result_list = [x[1] for x in pred]
+            logger.info('Values: {}'.format(result_list))
 
-        # Compute mAP
-        mAP = ut.mapk(gts, result_list, k=K)
-        logger.info('mAP: %.3f' % mAP)
+            # Compute mAP
+            mAP = ut.mapk(gts, result_list, k=K)
+            logger.info('mAP: %.3f' % mAP)
 
-        mAP_text = "{0:.3f}".format(mAP)
-        ut.bbox_to_pkl(
-            result_list,
-            "{}_{}_{}.pkl".format(mAP_text, space_color, feat_func),
-            folder=RESULT_DIR
-        )
+            mAP_text = "{0:.3f}".format(mAP)
+            if feat_func == 'orb':
+                text = "{}_{}_{}_nMatches_{}_thres_{}.pkl".format(mAP_text, space_color, feat_func, VAL_1, VAL_2)
+            elif feat_func == 'sift' or feat_func == 'surf':
+                text = "{}_{}_{}_metric_{}_thres_{}.pkl".format(mAP_text, space_color, feat_func, VAL_1, VAL_2)
+            else:
+                text = "{}_{}_{}.pkl".format(mAP_text, space_color, feat_func)
 
-
-# for space_color in COLOR_SPACE_LIST:
-    #     for dist_func in FEATURES:
-    #         fun = FEATURES[dist_func]
-    #         list_of_lists = []
-    #         query_gt_list = []
-    #         query_list = []
-    #
-    #         for query in db_query:
-    #             query_list.append(query)
-    #             query_gt_list.append([gt[query]])
-    #             query_h = db_query[query][hist_type][space_color]
-    #             logger.info("{}-{}-{}-{}".format(query, hist_type, space_color, dist_func))
-    #             result_list = []
-    #             for image in db_museum:
-    #                 image_h = db_museum[image][hist_type][space_color]
-    #                 metric = fun(np.array(query_h), np.array(image_h))
-    #                 result_list.append((metric, image))
-    #
-    #             if dist_func == "hellinger" or dist_func == "histIntersection":
-    #                 result_list.sort(key=lambda tup: tup[0], reverse=True)
-    #             else:
-    #                 result_list.sort(key=lambda tup: tup[0], reverse=False)
-    #
-    #             result_list = [x[1] for x in result_list[:K]]
-    #             list_of_lists.append(result_list)
-    #
-    #         # print(list_of_lists)
-    #
-    #         # Calcular mAP
-    #         mAP = ut.mapk(query_gt_list, list_of_lists, k=K)
-    #
-    #         # Exportar pkl
-    #         mAP_text = "{0:.3f}".format(mAP)
-    #
-    #         ut.bbox_to_pkl(
-    #             list_of_lists,
-    #             "{}_{}_{}_{}.pkl".format(mAP_text, hist_type, space_color, dist_func),
-    #             folder=RESULT_DIR
-    #         )
-    #
-    #         # print(query_list)
-    #         ut.bbox_to_pkl(
-    #             query_list,
-    #             "query_list.pkl",
-    #             folder=RESULT_DIR
-    #         )
+            ut.bbox_to_pkl(result_list, text, folder=RESULT_DIR)

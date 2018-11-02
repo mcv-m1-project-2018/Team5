@@ -17,6 +17,7 @@ def normalize(array):
     """
     return array / np.sqrt(np.sum(array**2))
 
+
 def orb(image):
     """
 
@@ -24,8 +25,9 @@ def orb(image):
     :return:
     """
     orb = cv.ORB_create()
-    _ , des = orb.detectAndCompute(image, None)
+    _, des = orb.detectAndCompute(image, None)
     return des
+
 
 def harris(image, sigma=1):
     """
@@ -88,11 +90,22 @@ def det_of_hessi(image):
 
 
 def sift(image):
-    pass
 
+    # Initiate SIFT detector
+    sift = cv.xfeatures2d.SIFT_create(10000)
+
+    # find the keypoints and descriptors with SIFT
+    _ , descriptors = sift.detectAndCompute(image, None)
+    return descriptors
 
 def surf(image):
-    pass
+
+    # Initiate SIFT detector
+    surf = cv.xfeatures2d.SURF_create(5000)
+
+    # find the keypoints and descriptors with SURF
+    _ , descriptors = surf.detectAndCompute(image,None)
+    return descriptors
 
 
 def daisy(image):
@@ -152,6 +165,7 @@ def hog(image, orientations=9, pixels_per_cell=(8, 8)):
 #kp1, des1 = orb.detectAndCompute(img1,None)
 #kp2, des2 = orb.detectAndCompute(img2,None)
 
+
 def compute_orb_descriptors(des1, des2, n_matches, thresh):
 
     #result = compute_orb_descriptors(des1, des2, 10, 500)
@@ -178,12 +192,6 @@ def compute_orb_descriptors(des1, des2, n_matches, thresh):
 #img1 = cv.imread('../dataset/query_devel_W4/ima_000005.jpg',0)          # queryImage
 #img2 = cv.imread('../dataset/BBDD_W4/ima_000099.jpg',0)                 # trainImage
 
-# Initiate SIFT detector
-#sift = cv.xfeatures2d.SIFT_create(10000)
-
-# find the keypoints and descriptors with SIFT
-#kp1, des1 = sift.detectAndCompute(img1,None)
-#kp2, des2 = sift.detectAndCompute(img2,None)
 
 def compute_sift_descriptor(des1, des2, metric, thresh):
 
