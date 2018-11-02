@@ -408,3 +408,7 @@ def plot_images(imgs):
         plt.imshow(img)
 
     plt.show()
+
+
+def get_number_from_filename(fname):
+    return int(fname.split("_")[1].split(".")[0])
