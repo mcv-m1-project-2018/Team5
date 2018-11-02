@@ -9,8 +9,8 @@ import pickle
 import numpy as np
 
 # Local modules
-import w4.utils as ut
-import w4.features as feat
+import utils as ut
+import features as feat
 
 # Useful directories
 RESULT_DIR = os.path.join('pkl')
