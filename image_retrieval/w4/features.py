@@ -92,7 +92,7 @@ def det_of_hessi(image):
 def sift(image):
 
     # Initiate SIFT detector
-    sift = cv.xfeatures2d.SIFT_create(10000)
+    sift = cv.xfeatures2d.SIFT_create(1000)
 
     # find the keypoints and descriptors with SIFT
     _ , descriptors = sift.detectAndCompute(image, None)
@@ -101,7 +101,7 @@ def sift(image):
 def surf(image):
 
     # Initiate SIFT detector
-    surf = cv.xfeatures2d.SURF_create(5000)
+    surf = cv.xfeatures2d.SURF_create(1000)
 
     # find the keypoints and descriptors with SURF
     _ , descriptors = surf.detectAndCompute(image,None)
@@ -207,7 +207,7 @@ def compute_sift_descriptor(des1, des2, metric, thresh):
     for m,n in matches:
         if m.distance < metric*n.distance:
             good.append([m])
-            
+
     return(len(good)>thresh)
 
 
@@ -228,7 +228,7 @@ def compute_sift_descriptor(des1, des2, metric, thresh):
 def compute_surf_descriptor(des1, des2, metric, thresh):
 
     # Result: compute_sift_descriptor(des1, des2, 0.5, 5)
-    # Metric < 0.5, Threshold NOT SO GOOD! The ratio algorith may not be the best... 
+    # Metric < 0.5, Threshold NOT SO GOOD! The ratio algorithm may not be the best...
 
     # BFMatcher with default params
     bf = cv.BFMatcher()
