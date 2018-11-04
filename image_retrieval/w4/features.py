@@ -183,7 +183,8 @@ def compute_orb_descriptors(des1, des2, n_matches, thresh):
         dist.append(m.distance)
 
     sqrt_sum = np.sum(np.array(dist)**2) / n_matches
-    return sqrt_sum <= thresh
+    #return sqrt_sum <= thresh
+    return sqrt_sum
 
 ########
 # SIFT:
@@ -208,8 +209,8 @@ def compute_sift_descriptor(des1, des2, metric, thresh):
         if m.distance < metric*n.distance:
             good.append([m])
 
-    return(len(good)>thresh)
-
+    #return(len(good)>thresh)
+    return(len(good))
 
 ########
 # SURF:
@@ -240,5 +241,6 @@ def compute_surf_descriptor(des1, des2, metric, thresh):
         if m.distance < metric*n.distance:
             good.append([m])
             
-    return(len(good)>=thresh)
+    # return(len(good)>=thresh)
+    return(len(good))
 

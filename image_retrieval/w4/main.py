@@ -5,18 +5,20 @@ import logging
 import os
 import pickle
 
-# 3rd party modules
-import numpy as np
-
 # Local modules
 import utils as ut
 import features as feat
 
 # Useful directories
+# TRAIN
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'BBDD_W4')
 TRAIN_QUERY_DIR = os.path.join('dataset', 'query_devel_W4')
 GTS_DIR = os.path.join('dataset', 'w4_query_devel.pkl')
 RESULT_DIR = os.path.join('pkl')
+
+# TEST
+# TRAIN_QUERY_DIR = os.path.join('dataset', 'query_test')
+# GTS_DIR = os.path.join('dataset', 'no_gt.pkl')
 
 # Pickle filenames with the training data
 PICKLE_MUSEUM_DATASET = 'train_museum.pkl'
@@ -24,8 +26,7 @@ PICKLE_QUERY_DATASET = 'train_query.pkl'
 
 # Global variables
 K = 10
-#COLOR_SPACE_LIST = ['rgb', 'hsv']
-COLOR_SPACE_LIST = ['rgb']
+COLOR_SPACE_LIST = ['rgb', 'hsv']
 FEATURES = {
     'orb': feat.orb,
     'sift': feat.sift,
@@ -33,9 +34,9 @@ FEATURES = {
     # 'hog': feat.hog,
 }
 
-orb_values = [(20, 800),(15, 800)]
-sift_values = [(0.5, 20),(0.4, 20),(0.3, 20),(0.2, 20),(0.5, 15),(0.4, 15),(0.3, 15),(0.2, 15)]
-surf_values = [(0.5, 100),(0.4, 50),(0.4, 70),(0.4, 100),(0.3, 50),(0.3, 70),(0.3, 100)]
+orb_values = [(10, 700), (20, 1100)]
+sift_values = [(0.4, 20), (0.4, 15)]
+surf_values = [(0.5, 100), (0.4, 50)]
 
 # Logger setup
 logging.basicConfig(
@@ -92,7 +93,7 @@ if __name__ == '__main__':
         # Iterate over feature descriptors defined above
         for feat_func, func in FEATURES.items():
             logger.info(feat_func)
-
+            values = ""
             pred = list()
 
             if feat_func == 'orb':
@@ -103,15 +104,15 @@ if __name__ == '__main__':
                 values = surf_values
 
             for (VAL_1, VAL_2) in values:
-                #print("{} {}".format(VAL_1, VAL_2))
                 pred = list()
                 result_list = list()
 
                 # Iterate over query data stored in the database
                 for query in db_query:
+                    logger.info("{}".format(query))
                     query_feats = db_query[query][feat_func]
                     query_pred = list()
-                    match = False
+                    match = 0
 
                     # Iterate over training data stored in the database
                     for image in db_museum:
@@ -123,16 +124,22 @@ if __name__ == '__main__':
                         if feat_func == 'surf':
                             match = feat.compute_surf_descriptor(query_feats, image_feats, VAL_1, VAL_2)
 
-                        # If the descriptors of the train image matches with those from the query
-                        # image, add the train image value to the list
-                        if match:
-                            query_pred.append(ut.get_number_from_filename(image))
-                            logger.info("Success --> Query:{} ----- GT:{}".format(query, image))
+                        query_pred.append((match, ut.get_number_from_filename(image)))
 
-                    # If no success images found
-                    if len(query_pred) == 0:
-                        query_pred.append(-1)
+                    if feat_func == 'orb':
+                        query_pred.sort(key=lambda x: x[0])
+                    if feat_func == 'sift' or feat_func == 'surf':
+                        query_pred.sort(key=lambda x: x[0], reverse=True)
+
+                    logger.info("{}".format(query_pred))
+
+                    # If first value do not reach threshold
+                    logger.info("{}--{}".format(query_pred[0][0], VAL_2))
+                    if feat_func == 'orb' and query_pred[0][0] > VAL_2 or (feat_func == 'sift' or feat_func == 'surf') and query_pred[0][0] < VAL_2:
+                        query_pred = [-1]
                         logger.info("No matches found for {}".format(query))
+                    else:
+                        query_pred = [x[1] for x in query_pred[:K]]
 
                     pred.append([ut.get_number_from_filename(query), query_pred])
 
@@ -143,8 +150,6 @@ if __name__ == '__main__':
                 # Get only values
                 result_list = [x[1] for x in pred]
                 logger.info('Values: {}'.format(result_list))
-
-
 
                 if not gts:
                     if feat_func == 'orb':
