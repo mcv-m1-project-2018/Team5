@@ -4,7 +4,9 @@ results/
 .ipynb_checkpoints
 __pycache__
 *.pyc
-dataset/
 traffic_signs/
 pkl/
 w3/
+w4/
+train_museum.pkl
+train_query.pkl
