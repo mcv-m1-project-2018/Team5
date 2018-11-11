@@ -60,6 +60,19 @@ if __name__ == '__main__':
         logger.info("Reading pickle database for museum dataset...")
         db_museum = ut.get_db(PICKLE_MUSEUM_DATASET)
 
+    logger.info("Loaded data")
+
+
+
+
+
+
+
+
+
+
+    #########################################  TASK 4: Retrieval system and evaluation  ###########################################
+
     # Check for query database file
     if not os.path.exists(PICKLE_QUERY_DATASET):
         logger.info("Creating pickle database for query dataset...")
@@ -85,8 +98,6 @@ if __name__ == '__main__':
     if not os.path.exists(RESULT_DIR):
         logger.info("Creating %s" % RESULT_DIR)
         os.mkdir(RESULT_DIR)
-
-    logger.info("Loaded data")
 
     # Iterate over color spaces defined above
     for space_color in COLOR_SPACE_LIST:

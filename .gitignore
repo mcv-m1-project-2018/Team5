@@ -1,4 +1,4 @@
-dataset/*/
+dataset/
 results/
 .idea/
 .ipynb_checkpoints
@@ -10,3 +10,6 @@ w3/
 w4/
 train_museum.pkl
 train_query.pkl
+w5_BBDD_random/
+w5_devel_random/
+Untitled.ipynb
