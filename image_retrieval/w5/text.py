@@ -5,7 +5,7 @@ import numpy as np;
 import cv2
 
 
-def get_text_area(path_image):
+def get_text_area(img):
     """
 
     :param img: color image read with openCV
@@ -18,8 +18,8 @@ def get_text_area(path_image):
   #  print(image_name)
 
     # Read image
-    img = cv2.imread(path_image, cv2.IMREAD_GRAYSCALE)
-    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #img = cv2.imread(path_image, cv2.IMREAD_GRAYSCALE)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_size = img.shape
 
     laplacian = cv2.Laplacian(img, cv2.CV_8U, ksize=1)

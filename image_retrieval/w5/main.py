@@ -72,25 +72,26 @@ if __name__ == '__main__':
     ##################################  TASK 1: TEXT  ####################################
     candidates = []
 
+    # Read images and find text_area
     for f in ut.get_files_from_dir(TRAIN_MUSEUM_DIR, excl_ext=['DS_Store']):
         img = ut.get_img(TRAIN_MUSEUM_DIR, f)
-        candidates.append([ut.get_number_from_filename(f), text.get_text_area(os.path.join(TRAIN_MUSEUM_DIR, f))])
+        candidates.append([ut.get_number_from_filename(f), text.get_text_area(img)])
 
+    # Sort bboxes
     candidates.sort(key=lambda x: x[0])
-    print(candidates)
     candidates = [x[1] for x in candidates]
-    print(candidates)
 
+    # Read groundtruth
     gt_annotations = ut.get_db(GTS_BBOXES_DIR)
-    print(gt_annotations)
 
+    # Compute intersection over union
     TP, FN, FP = ut.compute_iou(candidates, gt_annotations)
-    print("TP:{}    FN={}   FP={}".format(TP, FN, FP))
-
+    logger.info("TP:{}    FN={}   FP={}".format(TP, FN, FP))
     precision = TP/(TP+FP)
     recall = TP/(TP+FN)
     f_score = (2*precision*recall)/(precision+recall)
 
+    # Export pkl
     text = "bboxes_prec_{0:.3f}_recall_{1:.3f}_score_{2:.3f}".format(precision, recall, f_score)
     ut.bbox_to_pkl(candidates, text, folder=RESULT_DIR)
 
