@@ -284,23 +284,7 @@ def rsift(image, eps=1e-7):
 
     # return a tuple of the keypoints and descriptors
     #return (kps, descs)
-    return descs
-
-def compute_rsift_descriptor(des1, des2, n_matches, thresh):
-    
-    ''' Input = Images descriptors
-    Output = True if images match, False otherwise'''
-    
-    # create BFMatcher object
-    bf = cv.BFMatcher(cv.NORM_L2, crossCheck=True)
-    # Match descriptors.
-    matches = bf.match(des1,des2)
-    # Sort them in the order of their distance.
-    matches = sorted(matches, key = lambda x:x.distance)
-
-    dist = []
-    for m in matches[:n_matches]:
-        dist.append(m.distance)
+    return (kps, descs)
 
 
 def exclude_kps(kps, descs, bbox_text):
@@ -319,22 +303,30 @@ def exclude_kps(kps, descs, bbox_text):
     ri = bbox_text[1]
     cf = bbox_text[2]
     rf = bbox_text[3]
-    
-    valid_kps = []
+
     valid_descs = []
-    
     for i, k in enumerate(kps):
-        
         kr = k.pt[1] 
         kc = k.pt[0] 
-        
-        print(kr, kc)
-        
+
         if kr < ri or kr > rf or kc < ci or kc > cf:
-            
-            valid_kps.append(k)
             valid_descs.append(descs[i])
     
-    return valid_kps, valid_descs
+    return valid_descs
 
 
+def compute_rsift_descriptor(des1, des2, n_matches, thresh):
+    
+    ''' Input = Images descriptors
+    Output = True if images match, False otherwise'''
+    
+    # create BFMatcher object
+    bf = cv.BFMatcher(cv.NORM_L2, crossCheck=True)
+    # Match descriptors.
+    matches = bf.match(des1,des2)
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    dist = []
+    for m in matches[:n_matches]:
+        dist.append(m.distance)
