@@ -302,7 +302,39 @@ def compute_rsift_descriptor(des1, des2, n_matches, thresh):
     for m in matches[:n_matches]:
         dist.append(m.distance)
 
-    sqrt_sum = np.sum(np.array(dist)**2) / n_matches
+
+def exclude_kps(kps, descs, bbox_text):
+
+    '''
+    Input: Image keypoints + descriptors + Text Bbox
+    Output: Filtered keypoints (dont consider kps inside Bbox)
+
+    Implementation example:
+    (kp1, des1) = compute_rsift(img1)
+    bbox = [95, 867, 767, 991]
+    (kp2, des2) = exclude_kps(kp1, des1, bbox) 
+    '''
     
-    #return sqrt_sum <= thresh
-    return sqrt_sum
+    ci = bbox_text[0]
+    ri = bbox_text[1]
+    cf = bbox_text[2]
+    rf = bbox_text[3]
+    
+    valid_kps = []
+    valid_descs = []
+    
+    for i, k in enumerate(kps):
+        
+        kr = k.pt[1] 
+        kc = k.pt[0] 
+        
+        print(kr, kc)
+        
+        if kr < ri or kr > rf or kc < ci or kc > cf:
+            
+            valid_kps.append(k)
+            valid_descs.append(descs[i])
+    
+    return valid_kps, valid_descs
+
+
