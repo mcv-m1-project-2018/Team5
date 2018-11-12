@@ -281,7 +281,6 @@ def rsift(image, eps=1e-7):
     # square-root
     descs /= (descs.sum(axis=1, keepdims=True) + eps)
     descs = np.sqrt(descs)
-    #descs /= (np.linalg.norm(descs, axis=1, ord=2) + eps)
 
     # return a tuple of the keypoints and descriptors
     #return (kps, descs)

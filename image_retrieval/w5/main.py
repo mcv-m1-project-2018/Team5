@@ -8,12 +8,16 @@ import pickle
 # Local modules
 import utils as ut
 import features as feat
+import text as text
 
 # Useful directories
 # TRAIN
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'w5_BBDD_random')
+#TRAIN_MUSEUM_DIR = os.path.join('dataset', 'BBDD_W4')
 TRAIN_QUERY_DIR = os.path.join('dataset', 'w5_devel_random')
+#TRAIN_QUERY_DIR = os.path.join('dataset', 'query_devel_W4')
 GTS_DIR = os.path.join('dataset', 'w5_query_devel.pkl')
+#GTS_DIR = os.path.join('dataset', 'w4_query_devel.pkl')
 GTS_BBOXES_DIR = os.path.join('dataset', 'w5_text_bbox_list.pkl')
 RESULT_DIR = os.path.join('pkl')
 
@@ -39,7 +43,7 @@ FEATURES = {
 orb_values = [(10, 1000), (20, 1100)]
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
-rsift_values = [(20, 0.02)]
+rsift_values = [(20, 0.06),(20, 0.07),(20, 0.08)]
 
 # Logger setup
 logging.basicConfig(
@@ -65,18 +69,37 @@ if __name__ == '__main__':
 
     logger.info("Loaded data")
 
+    ##################################  TASK 1: TEXT  ####################################
+    candidates = []
 
+    for f in ut.get_files_from_dir(TRAIN_MUSEUM_DIR, excl_ext=['DS_Store']):
+        img = ut.get_img(TRAIN_MUSEUM_DIR, f)
+        candidates.append([ut.get_number_from_filename(f), text.get_text_area(os.path.join(TRAIN_MUSEUM_DIR, f))])
 
+    candidates.sort(key=lambda x: x[0])
+    print(candidates)
+    candidates = [x[1] for x in candidates]
+    print(candidates)
 
+    gt_annotations = ut.get_db(GTS_BBOXES_DIR)
+    print(gt_annotations)
 
+    TP, FN, FP = ut.compute_iou(candidates, gt_annotations)
+    print("TP:{}    FN={}   FP={}".format(TP, FN, FP))
 
+    precision = TP/(TP+FP)
+    recall = TP/(TP+FN)
+    f_score = (2*precision*recall)/(precision+recall)
 
+    text = "bboxes_prec_{0:.3f}_recall_{1:.3f}_score_{2:.3f}".format(precision, recall, f_score)
+    ut.bbox_to_pkl(candidates, text, folder=RESULT_DIR)
 
+    raise
 
 
     ##################################  TASK 4: Retrieval system and evaluation  ####################################
-
     ############################### WARNING: Don't touch below this sign. Ask Pablo #################################
+    # TODO: Filtrado de keypoints
 
     # Check for query database file
     if not os.path.exists(PICKLE_QUERY_DATASET):
@@ -172,7 +195,7 @@ if __name__ == '__main__':
                 logger.info('Values: {}'.format(result_list))
 
                 if not gts:
-                    if feat_func == 'orb':
+                    if feat_func == 'orb' or feat_func == 'rsift':
                         text = "{}_{}_nMatches_{}_thres_{}.pkl".format(space_color, feat_func, VAL_1, VAL_2)
                     elif feat_func == 'sift' or feat_func == 'surf':
                         text = "{}_{}_metric_{}_thres_{}.pkl".format(space_color, feat_func, VAL_1, VAL_2)
@@ -189,7 +212,7 @@ if __name__ == '__main__':
                     logger.info('mAP: %.3f' % mAP)
 
                     mAP_text = "{0:.3f}".format(mAP)
-                    if feat_func == 'orb':
+                    if feat_func == 'orb' or feat_func == 'rsift':
                         text = "{}_{}_{}_nMatches_{}_thres_{}.pkl".format(mAP_text, space_color, feat_func, VAL_1, VAL_2)
                     elif feat_func == 'sift' or feat_func == 'surf':
                         text = "{}_{}_{}_metric_{}_thres_{}.pkl".format(mAP_text, space_color, feat_func, VAL_1, VAL_2)
