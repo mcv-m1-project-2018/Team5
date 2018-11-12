@@ -244,3 +244,64 @@ def compute_surf_descriptor(des1, des2, metric, thresh):
     # return(len(good)>=thresh)
     return(len(good))
 
+
+
+#########
+# RSift:
+#########
+
+'''
+Steps for implementing RSift:
+
+(kp1, des1) = compute_rsift(img1)
+(kp2, des2) = compute_rsift(img2)
+
+result = match_kpt_rsift(des1, des2, 20, 0.02) ---> (True / False)
+'''
+
+def compute_rsift(image, eps=1e-7):
+    
+    '''Input = OpenCv color Image
+       Output = Image keypoints + descriptors'''
+    
+    # Convert to gray scale:
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # compute SIFT descriptors
+    (kps, descs) = sift.detectAndCompute(image, None)
+
+    # if there are no keypoints or descriptors, return an empty tuple
+    if len(kps) == 0:
+        return ([], None)
+
+    # apply the Hellinger kernel by first L1-normalizing and taking the
+    # square-root
+    descs /= (descs.sum(axis=1, keepdims=True) + eps)
+    descs = np.sqrt(descs)
+    #descs /= (np.linalg.norm(descs, axis=1, ord=2) + eps)
+
+    # return a tuple of the keypoints and descriptors
+    return (kps, descs)
+
+def match_kpt_rsift(des1, des2, n_matches, thresh):
+    
+    ''' Input = Images descriptors
+    Output = True if images match, False otherwise'''
+    
+    # create BFMatcher object
+    bf = cv.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    # Match descriptors.
+    matches = bf.match(des1,des2)
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    dist = []
+    for m in matches[:n_matches]:
+        dist.append(m.distance)
+
+    sqrt_sum = np.sum(np.array(dist)**2) / n_matches
+    
+    return sqrt_sum <= thresh
+
+
+
