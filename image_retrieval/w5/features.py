@@ -253,22 +253,25 @@ def compute_surf_descriptor(des1, des2, metric, thresh):
 '''
 Steps for implementing RSift:
 
-(kp1, des1) = compute_rsift(img1)
-(kp2, des2) = compute_rsift(img2)
+(kp1, des1) = rsift(img1)
+(kp2, des2) = rsift(img2)
 
 result = match_kpt_rsift(des1, des2, 20, 0.02) ---> (True / False)
 '''
 
-def compute_rsift(image, eps=1e-7):
+def rsift(image, eps=1e-7):
     
     '''Input = OpenCv color Image
        Output = Image keypoints + descriptors'''
     
     # Convert to gray scale:
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+
+    # Initiate SIFT detector
+    sift = cv.xfeatures2d.SIFT_create(1000)
+
     # compute SIFT descriptors
-    (kps, descs) = sift.detectAndCompute(image, None)
+    (kps, descs) = sift.detectAndCompute(gray, None)
 
     # if there are no keypoints or descriptors, return an empty tuple
     if len(kps) == 0:
@@ -281,15 +284,16 @@ def compute_rsift(image, eps=1e-7):
     #descs /= (np.linalg.norm(descs, axis=1, ord=2) + eps)
 
     # return a tuple of the keypoints and descriptors
-    return (kps, descs)
+    #return (kps, descs)
+    return descs
 
-def match_kpt_rsift(des1, des2, n_matches, thresh):
+def compute_rsift_descriptor(des1, des2, n_matches, thresh):
     
     ''' Input = Images descriptors
     Output = True if images match, False otherwise'''
     
     # create BFMatcher object
-    bf = cv.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    bf = cv.BFMatcher(cv.NORM_L2, crossCheck=True)
     # Match descriptors.
     matches = bf.match(des1,des2)
     # Sort them in the order of their distance.
@@ -301,7 +305,5 @@ def match_kpt_rsift(des1, des2, n_matches, thresh):
 
     sqrt_sum = np.sum(np.array(dist)**2) / n_matches
     
-    return sqrt_sum <= thresh
-
-
-
+    #return sqrt_sum <= thresh
+    return sqrt_sum

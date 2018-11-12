@@ -29,15 +29,17 @@ PICKLE_QUERY_DATASET = 'train_query.pkl'
 K = 10
 COLOR_SPACE_LIST = ['rgb']
 FEATURES = {
-    'orb': feat.orb,
+    #'orb': feat.orb,
     # 'sift': feat.sift,
     # 'surf': feat.surf,
     # 'hog': feat.hog,
+     'rsift': feat.rsift
 }
 
 orb_values = [(10, 1000), (20, 1100)]
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
+rsift_values = [(20, 0.02)]
 
 # Logger setup
 logging.basicConfig(
@@ -116,6 +118,8 @@ if __name__ == '__main__':
                 values = sift_values
             if feat_func == 'surf':
                 values = surf_values
+            if feat_func == 'rsift':
+                values = rsift_values
 
             for (VAL_1, VAL_2) in values:
                 pred = list()
@@ -137,10 +141,12 @@ if __name__ == '__main__':
                             match = feat.compute_sift_descriptor(query_feats, image_feats, VAL_1, VAL_2)
                         if feat_func == 'surf':
                             match = feat.compute_surf_descriptor(query_feats, image_feats, VAL_1, VAL_2)
+                        if feat_func == 'rsift':
+                            match = feat.compute_rsift_descriptor(query_feats, image_feats, VAL_1, VAL_2)
 
                         query_pred.append((match, ut.get_number_from_filename(image)))
 
-                    if feat_func == 'orb':
+                    if feat_func == 'orb' or feat_func == 'rsift':
                         query_pred.sort(key=lambda x: x[0])
                     if feat_func == 'sift' or feat_func == 'surf':
                         query_pred.sort(key=lambda x: x[0], reverse=True)
@@ -149,7 +155,7 @@ if __name__ == '__main__':
 
                     # If first value do not reach threshold
                     logger.info("{}--{}".format(query_pred[0][0], VAL_2))
-                    if feat_func == 'orb' and query_pred[0][0] > VAL_2 or (feat_func == 'sift' or feat_func == 'surf') and query_pred[0][0] < VAL_2:
+                    if (feat_func == 'orb' or feat_func == 'rsift') and query_pred[0][0] > VAL_2 or (feat_func == 'sift' or feat_func == 'surf') and query_pred[0][0] < VAL_2:
                         query_pred = [-1]
                         logger.info("No matches found for {}".format(query))
                     else:
