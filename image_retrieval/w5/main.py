@@ -14,6 +14,7 @@ import features as feat
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'w5_BBDD_random')
 TRAIN_QUERY_DIR = os.path.join('dataset', 'w5_devel_random')
 GTS_DIR = os.path.join('dataset', 'w5_query_devel.pkl')
+GTS_BBOXES_DIR = os.path.join('dataset', 'w5_text_bbox_list.pkl')
 RESULT_DIR = os.path.join('pkl')
 
 # TEST
@@ -71,7 +72,9 @@ if __name__ == '__main__':
 
 
 
-    #########################################  TASK 4: Retrieval system and evaluation  ###########################################
+    ##################################  TASK 4: Retrieval system and evaluation  ####################################
+
+    ############################### WARNING: Don't touch below this sign. Ask Pablo #################################
 
     # Check for query database file
     if not os.path.exists(PICKLE_QUERY_DATASET):
