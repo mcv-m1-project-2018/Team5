@@ -13,11 +13,8 @@ import text as text
 # Useful directories
 # TRAIN
 TRAIN_MUSEUM_DIR = os.path.join('dataset', 'w5_BBDD_random')
-#TRAIN_MUSEUM_DIR = os.path.join('dataset', 'BBDD_W4')
 TRAIN_QUERY_DIR = os.path.join('dataset', 'w5_devel_random')
-#TRAIN_QUERY_DIR = os.path.join('dataset', 'query_devel_W4')
 GTS_DIR = os.path.join('dataset', 'w5_query_devel.pkl')
-#GTS_DIR = os.path.join('dataset', 'w4_query_devel.pkl')
 GTS_BBOXES_DIR = os.path.join('dataset', 'w5_text_bbox_list.pkl')
 RESULT_DIR = os.path.join('pkl')
 
@@ -37,13 +34,13 @@ FEATURES = {
     # 'sift': feat.sift,
     # 'surf': feat.surf,
     # 'hog': feat.hog,
-     'rsift': feat.rsift
+    'rsift': feat.rsift
 }
 
 orb_values = [(10, 1000), (20, 1100)]
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
-rsift_values = [(20, 0.06),(20, 0.07),(20, 0.08)]
+rsift_values = [(20, 0.03),(20, 0.035),(20, 0.04),(20, 0.045)]
 
 # Logger setup
 logging.basicConfig(
@@ -58,10 +55,48 @@ if __name__ == '__main__':
 
     logger.info("Starting Museum Painting Retrieval")
 
+    ##################################  TASK 1: TEXT  ####################################
+
+    candidates = []
+
+    if not os.path.exists("pkl/bboxes_prec_0.976_recall_1.000_score_0.988.pkl"):
+        # Read images and find text_area
+        for f in ut.get_files_from_dir(TRAIN_MUSEUM_DIR, excl_ext=['DS_Store']):
+            img = ut.get_img(TRAIN_MUSEUM_DIR, f)
+            candidates.append([ut.get_number_from_filename(f), text.get_text_area(img, f)])
+
+        # Sort bboxes
+        candidates.sort(key=lambda x: x[0])
+        #print(candidates)
+        candidates = [x[1] for x in candidates]
+
+        # Read groundtruth
+        gt_annotations = ut.get_db(GTS_BBOXES_DIR)
+
+        # Compute intersection over union
+        TP, FN, FP = text.compute_iou(candidates, gt_annotations)
+        logger.info("TP:{}    FN={}   FP={}".format(TP, FN, FP))
+        precision = TP/(TP+FP)
+        recall = TP/(TP+FN)
+        f_score = (2*precision*recall)/(precision+recall)
+
+        # Export pkl
+        text = "bboxes_prec_{0:.3f}_recall_{1:.3f}_score_{2:.3f}".format(precision, recall, f_score)
+        ut.bbox_to_pkl(candidates, text, folder=RESULT_DIR)
+    else:
+        candidates = ut.get_db("pkl/bboxes_prec_0.976_recall_1.000_score_0.988.pkl")
+
+
+
+    ##################################  TASK 2: ROTATE & CROP  ####################################
+
+
+
+    ##################################  TASK 3: Filter keypoints  ####################################
     # Check for training database file
     if not os.path.exists(PICKLE_MUSEUM_DATASET):
         logger.info("Creating pickle database for museum dataset...")
-        db_museum = ut.create_db(TRAIN_MUSEUM_DIR, FEATURES)
+        db_museum = ut.create_db(TRAIN_MUSEUM_DIR, FEATURES, candidates)
         ut.save_db(db_museum, PICKLE_MUSEUM_DATASET)
     else:
         logger.info("Reading pickle database for museum dataset...")
@@ -69,43 +104,13 @@ if __name__ == '__main__':
 
     logger.info("Loaded data")
 
-    ##################################  TASK 1: TEXT  ####################################
-    candidates = []
-
-    # Read images and find text_area
-    for f in ut.get_files_from_dir(TRAIN_MUSEUM_DIR, excl_ext=['DS_Store']):
-        img = ut.get_img(TRAIN_MUSEUM_DIR, f)
-        candidates.append([ut.get_number_from_filename(f), text.get_text_area(img)])
-
-    # Sort bboxes
-    candidates.sort(key=lambda x: x[0])
-    candidates = [x[1] for x in candidates]
-
-    # Read groundtruth
-    gt_annotations = ut.get_db(GTS_BBOXES_DIR)
-
-    # Compute intersection over union
-    TP, FN, FP = ut.compute_iou(candidates, gt_annotations)
-    logger.info("TP:{}    FN={}   FP={}".format(TP, FN, FP))
-    precision = TP/(TP+FP)
-    recall = TP/(TP+FN)
-    f_score = (2*precision*recall)/(precision+recall)
-
-    # Export pkl
-    text = "bboxes_prec_{0:.3f}_recall_{1:.3f}_score_{2:.3f}".format(precision, recall, f_score)
-    ut.bbox_to_pkl(candidates, text, folder=RESULT_DIR)
-
-    raise
-
-
     ##################################  TASK 4: Retrieval system and evaluation  ####################################
     ############################### WARNING: Don't touch below this sign. Ask Pablo #################################
-    # TODO: Filtrado de keypoints
 
     # Check for query database file
     if not os.path.exists(PICKLE_QUERY_DATASET):
         logger.info("Creating pickle database for query dataset...")
-        db_query = ut.create_db(TRAIN_QUERY_DIR, FEATURES)
+        db_query = ut.create_db(TRAIN_QUERY_DIR, FEATURES, query=True)
         ut.save_db(db_query, PICKLE_QUERY_DATASET)
     else:
         logger.info("Reading pickle database for query dataset...")
@@ -132,6 +137,7 @@ if __name__ == '__main__':
     for space_color in COLOR_SPACE_LIST:
         # Iterate over feature descriptors defined above
         for feat_func, func in FEATURES.items():
+            print(feat_func)
             logger.info(feat_func)
             values = ""
             pred = list()

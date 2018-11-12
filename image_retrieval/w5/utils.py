@@ -251,7 +251,7 @@ def get_histograms_for_color_spaces(img):
     return data
 
 
-def create_db(imgs_dir, FEATURES):
+def create_db(imgs_dir, FEATURES, text_bboxes=list(), query=False):
     """
     Create a database from images in a directory. The database is a dictionary of the form
 
@@ -270,6 +270,7 @@ def create_db(imgs_dir, FEATURES):
     db = dict()
 
     for f in get_files_from_dir(imgs_dir, excl_ext=['DS_Store']):
+
         logger.debug(f)
         t0 = time.time()
         data = dict()
@@ -278,12 +279,20 @@ def create_db(imgs_dir, FEATURES):
         # img = resize(img)
 
         # Compute the different feature descriptors for the image
-        for feat_name, feat_func in FEATURES.items():
-            data[feat_name] = feat_func(img)
+        if not query:
+            for feat_name, feat_func in FEATURES.items():
+                temp_keypoints = feat_func(img)
+                data[feat_name] = feat.exclude_kps(temp_keypoints[0], temp_keypoints[1], text_bboxes[get_number_from_filename(f)])
+
+        else:
+            for feat_name, feat_func in FEATURES.items():
+                temp_keypoints = feat_func(img)
+                data[feat_name] = temp_keypoints[1]
 
         db[f] = data
 
         logger.debug("Info of image '%s' saved (%.3f s)." % (f, (time.time() - t0)))
+
 
     return db
 
@@ -414,42 +423,3 @@ def plot_images(imgs):
 def get_number_from_filename(fname):
     return int(fname.split("_")[1].split(".")[0])
 
-
-def bbox_iou(bboxA, bboxB):
-    # compute the intersection over union of two bboxes
-
-    # Format of the bboxes is [tly, tlx, bry, brx, ...], where tl and br
-    # indicate top-left and bottom-right corners of the bbox respectively.
-
-    # determine the coordinates of the intersection rectangle
-    xA = max(bboxA[1], bboxB[1])
-    yA = max(bboxA[0], bboxB[0])
-    xB = min(bboxA[3], bboxB[3])
-    yB = min(bboxA[2], bboxB[2])
-
-    # compute the area of intersection rectangle
-    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-
-    # compute the area of both bboxes
-    bboxAArea = (bboxA[2] - bboxA[0] + 1) * (bboxA[3] - bboxA[1] + 1)
-    bboxBArea = (bboxB[2] - bboxB[0] + 1) * (bboxB[3] - bboxB[1] + 1)
-
-    iou = interArea / float(bboxAArea + bboxBArea - interArea)
-
-    # return the intersection over union value
-    return iou
-
-def compute_iou(candidates, annotations):
-
-    TP = 0
-    FP = 0
-    for n, candidate in enumerate(candidates):
-        annotation = annotations[n]
-        if bbox_iou(candidate, annotation) > 0.5:
-            TP += 1
-        else:
-            FP += 1
-
-    FN = len(annotations) - TP - FP
-
-    return TP, FN, FP

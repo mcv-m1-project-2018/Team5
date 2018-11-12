@@ -25,8 +25,8 @@ def orb(image):
     :return:
     """
     orb = cv.ORB_create()
-    _, des = orb.detectAndCompute(image, None)
-    return des
+    kps, des = orb.detectAndCompute(image, None)
+    return (kps, des)
 
 
 def harris(image, sigma=1):
@@ -286,6 +286,26 @@ def rsift(image, eps=1e-7):
     #return (kps, descs)
     return (kps, descs)
 
+def compute_rsift_descriptor(des1, des2, n_matches, thresh):
+    
+    ''' Input = Images descriptors
+    Output = True if images match, False otherwise'''
+    
+    # create BFMatcher object
+    bf = cv.BFMatcher(cv.NORM_L2, crossCheck=True)
+    # Match descriptors.
+    matches = bf.match(des1,des2)
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    dist = []
+    for m in matches[:n_matches]:
+        dist.append(m.distance)
+
+    sqrt_sum = np.sum(np.array(dist) ** 2) / n_matches
+    # return sqrt_sum <= thresh
+    return sqrt_sum
+
 
 def exclude_kps(kps, descs, bbox_text):
 
@@ -311,22 +331,7 @@ def exclude_kps(kps, descs, bbox_text):
 
         if kr < ri or kr > rf or kc < ci or kc > cf:
             valid_descs.append(descs[i])
-    
-    return valid_descs
 
 
-def compute_rsift_descriptor(des1, des2, n_matches, thresh):
-    
-    ''' Input = Images descriptors
-    Output = True if images match, False otherwise'''
-    
-    # create BFMatcher object
-    bf = cv.BFMatcher(cv.NORM_L2, crossCheck=True)
-    # Match descriptors.
-    matches = bf.match(des1,des2)
-    # Sort them in the order of their distance.
-    matches = sorted(matches, key = lambda x:x.distance)
+    return np.array(valid_descs)
 
-    dist = []
-    for m in matches[:n_matches]:
-        dist.append(m.distance)

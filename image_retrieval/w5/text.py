@@ -5,7 +5,7 @@ import numpy as np;
 import cv2
 
 
-def get_text_area(img):
+def get_text_area(img, image_name):
     """
 
     :param img: color image read with openCV
@@ -97,8 +97,8 @@ def get_text_area(img):
     #plt.show()
     # fig.savefig("adsf.png")
 
-    #cv2.imwrite('pruebas_8_kernel_3/example.png', im_floodfill_inv)
-    return (x, y, x+w, y+h)
+    cv2.imwrite('pruebas_9/' + image_name + '.png', im_floodfill_inv)
+    return (x-15, y-10, x+w+15, y+h+10)
 
 
 def remove_isolated_pixels(image, threshold):
@@ -117,3 +117,44 @@ def remove_isolated_pixels(image, threshold):
             new_image[labels == label] = 0
 
     return new_image
+
+def bbox_iou(bboxA, bboxB):
+    # compute the intersection over union of two bboxes
+
+    # Format of the bboxes is [tly, tlx, bry, brx, ...], where tl and br
+    # indicate top-left and bottom-right corners of the bbox respectively.
+
+    # determine the coordinates of the intersection rectangle
+    xA = max(bboxA[1], bboxB[1])
+    yA = max(bboxA[0], bboxB[0])
+    xB = min(bboxA[3], bboxB[3])
+    yB = min(bboxA[2], bboxB[2])
+
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+    # compute the area of both bboxes
+    bboxAArea = (bboxA[2] - bboxA[0] + 1) * (bboxA[3] - bboxA[1] + 1)
+    bboxBArea = (bboxB[2] - bboxB[0] + 1) * (bboxB[3] - bboxB[1] + 1)
+
+    iou = interArea / float(bboxAArea + bboxBArea - interArea)
+
+    # return the intersection over union value
+    return iou
+
+def compute_iou(candidates, annotations):
+
+    TP = 0
+    FP = 0
+    for n, candidate in enumerate(candidates):
+        annotation = annotations[n]
+        if bbox_iou(candidate, annotation) > 0.5:
+            TP += 1
+            #print("{}: TRUE".format(n))
+        else:
+            FP += 1
+            #print("{}: FALSE --------------------------------------------".format(n))
+
+    FN = len(annotations) - TP - FP
+
+    return TP, FN, FP
