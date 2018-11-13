@@ -35,14 +35,13 @@ FEATURES = {
     # 'sift': feat.sift,
     # 'surf': feat.surf,
     # 'hog': feat.hog,
-
 }
 
 orb_values = [(10, 900),(20, 1100)]
 rsift_values = [(10, 0.04), (15, 0.06)]
-
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
+
 
 # Logger setup
 logging.basicConfig(
@@ -61,31 +60,28 @@ if __name__ == '__main__':
 
     candidates = []
 
-    if not os.path.exists("pkl/bboxes_prec_0.976_recall_1.000_score_0.988.pkl"):
+    if not os.path.exists("pkl/bboxes_iou_0.86658.pkl"):
+
+        # Read groundtruth
+        gt_annotations = ut.get_db(GTS_BBOXES_DIR)
+
         # Read images and find text_area
         for f in ut.get_files_from_dir(TRAIN_MUSEUM_DIR, excl_ext=['DS_Store']):
             img = ut.get_img(TRAIN_MUSEUM_DIR, f)
-            candidates.append([ut.get_number_from_filename(f), text.get_text_area(img, f)])
+            candidates.append([ut.get_number_from_filename(f), text.get_text_area(img, f, gt=gt_annotations[ut.get_number_from_filename(f)])])
 
         # Sort bboxes
         candidates.sort(key=lambda x: x[0])
         candidates = [x[1] for x in candidates]
 
-        # Read groundtruth
-        gt_annotations = ut.get_db(GTS_BBOXES_DIR)
-
         # Compute intersection over union
-        TP, FN, FP = text.compute_iou(candidates, gt_annotations)
-        logger.info("TP:{}    FN={}   FP={}".format(TP, FN, FP))
-        precision = TP/(TP+FP)
-        recall = TP/(TP+FN)
-        f_score = (2*precision*recall)/(precision+recall)
+        mean_iou = text.compute_mean_iou(candidates, gt_annotations)
 
         # Export pkl
-        text = "bboxes_prec_{0:.3f}_recall_{1:.3f}_score_{2:.3f}".format(precision, recall, f_score)
+        text = "bboxes_iou_{0:.5f}.pkl".format(mean_iou)
         ut.bbox_to_pkl(candidates, text, folder=RESULT_DIR)
     else:
-        candidates = ut.get_db("pkl/bboxes_prec_0.976_recall_1.000_score_0.988.pkl")
+        candidates = ut.get_db("pkl/bboxes_iou_0.86658.pkl")
 
 
 

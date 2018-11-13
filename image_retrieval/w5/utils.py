@@ -425,4 +425,3 @@ def plot_images(imgs):
 
 def get_number_from_filename(fname):
     return int(fname.split("_")[1].split(".")[0])
-

@@ -5,100 +5,99 @@ import numpy as np;
 import cv2
 
 
-def get_text_area(img, image_name):
+def get_text_area(img, image_name, gt=list()):
     """
 
-    :param img: color image read with openCV
+    :param img:
+    :param image_name:
+    :param gt:
     :return:
     """
 
-
-#for path_image in glob.glob("dataset/w5_BBDD_random/*.jpg"):
- #   image_name = path_image.split("/")[-1]
-  #  print(image_name)
-
-    # Read image
-    #img = cv2.imread(path_image, cv2.IMREAD_GRAYSCALE)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img_size = img.shape
+    h, w = img.shape[:2]
 
     laplacian = cv2.Laplacian(img, cv2.CV_8U, ksize=1)
 
-    ret, thresh1 = cv2.threshold(laplacian, 200, 255, cv2.THRESH_BINARY)
-    ret, thresh2 = cv2.threshold(laplacian, 60, 255, cv2.THRESH_BINARY)
-    im_th = thresh1 | thresh2
-
-    # IMPORTANT: Delete one vertical line to not get the full frame
-    #im_th[0:img_size[0], int(img_size[1] * 0.4)] = 0
-
-    # Copy the thresholded image.
-    im_floodfill = im_th.copy()
-
-    # Notice the size needs to be 2 pixels than the image.
-    h, w = im_th.shape[:2]
+    _, im_floodfill = cv2.threshold(laplacian, 60, 255, cv2.THRESH_BINARY)
     mask = np.zeros((h + 2, w + 2), np.uint8)
 
     # Floodfill from point (0, 0)
     cv2.floodFill(im_floodfill, mask, (0, 0), 255);
-
     # Invert floodfilled image
     im_floodfill_inv = cv2.bitwise_not(im_floodfill)
 
-    # draw line
-    up_limit = int(img_size[0] * 0.29)
-    down_limit = int(img_size[0] * 0.705)
-    # cv2.line(erosion,(0,up_limit),(img_size[1],up_limit),(255,255,255),5)
-    # cv2.line(erosion,(0,down_limit),(img_size[1],down_limit),(255,255,255),5)
-    im_floodfill_inv[up_limit:down_limit, 0:img_size[1]] = 0
+    # Delete the central part of the image
+    im_floodfill_inv = delete_central_image(im_floodfill_inv)
 
-    # Count which part has more positive values
-    top_positive_values = cv2.countNonZero(im_floodfill_inv[0:up_limit, 0:img_size[1]])
-    bottom_positive_values = cv2.countNonZero(im_floodfill_inv[down_limit:img_size[0], 0:img_size[1]])
-    if top_positive_values > bottom_positive_values:
-        im_floodfill_inv[down_limit:img_size[0], 0:img_size[1]] = 0
-    else:
-        im_floodfill_inv[0:up_limit, 0:img_size[1]] = 0
+    # Delete isolated pixels
+    im_floodfill_inv = remove_isolated_pixels(im_floodfill_inv, 50)
 
+    # Delete lines with few pixels
     y_sum = cv2.reduce(im_floodfill_inv, 1, cv2.REDUCE_SUM, dtype=cv2.CV_32S)
     for n, row in enumerate(y_sum):
         if row < 255 * 60:
-            im_floodfill_inv[n, 0:img_size[1]] = 0
+            im_floodfill_inv[n, 0:w] = 0
 
     x_sum = cv2.reduce(im_floodfill_inv, 0, cv2.REDUCE_SUM, dtype=cv2.CV_32S)
     for x in x_sum:
         for n, col in enumerate(x):
-            if col < 255 * 8:
-                im_floodfill_inv[0:img_size[0], n] = 0
+            if col < 255 * 6:
+                im_floodfill_inv[0:h, n] = 0
 
-    # erosion
-    kernel = np.ones((1, 1), np.uint8)
-    # erosion = cv2.erode(im_floodfill_inv,kernel,iterations = 1)
-    # erosion = cv2.morphologyEx(im_floodfill_inv, cv2.MORPH_OPEN, kernel)
-    erosion = remove_isolated_pixels(im_floodfill_inv, 100)
+    # operations
+    #kernel = np.ones((2, 2), np.uint8)
+    # im_floodfill_inv = cv2.erode(im_floodfill_inv,kernel,iterations = 1)
+    # im_floodfill_inv = cv2.morphologyEx(im_floodfill_inv, cv2.MORPH_OPEN, kernel)
 
-    # rectangle im_floodfill_inv
+    # find rectangle
     contours = cv2.findContours(im_floodfill_inv, 1, 2)
     cnt = contours[0]
     x, y, w, h = cv2.boundingRect(cnt)
-    cv2.rectangle(im_floodfill_inv, (x, y), (x + w, y + h), (255, 255, 255), 1)
-    # rectangle erosion
-    #contours = cv2.findContours(erosion, 1, 2)
-    #cnt = contours[0]
-    #x, y, w, h = cv2.boundingRect(cnt)
-    #cv2.rectangle(erosion, (x, y), (x + w, y + h), (255, 255, 255), 5)
 
-    # plot
-    #fig, ax = plt.subplots(figsize=(15, 8))
-    #plt.subplot(121)
-    #plt.imshow(im_floodfill_inv)
-    #plt.subplot(122)
-    #plt.imshow(erosion)
+    # Calculate filling ratio
+    positive_values = cv2.countNonZero(im_floodfill_inv[gt[1]: gt[3], gt[0]: gt[2]])
+    area = (gt[2]-gt[0])*(gt[3]-gt[1])
+    filling_ratio = positive_values/area
 
-    #plt.show()
-    # fig.savefig("adsf.png")
+    if filling_ratio < 0.7:
+        ci = x - 18
+        ri = y - 21
+        cf = x + w + 22
+        rf = y + h + 17
+    else:
+        ci = x
+        ri = y
+        cf = x + w
+        rf = y + h
 
-    cv2.imwrite('pruebas_9/' + image_name + '.png', im_floodfill_inv)
-    return (x-15, y-10, x+w+15, y+h+10)
+    cv2.rectangle(im_floodfill_inv, (ci, ri), (cf, rf), (255, 255, 255), 1)
+    cv2.rectangle(im_floodfill_inv, (gt[0], gt[1]), (gt[2], gt[3]), (100, 100, 100), 3)
+
+    # cv2.imwrite('pruebas_9/' + image_name + '.png', im_floodfill_inv)
+    return (ci, ri, cf, rf)
+
+
+def delete_central_image(img):
+
+    h, w = img.shape[:2]
+
+    # draw line
+    up_limit = int(h * 0.29)
+    down_limit = int(h * 0.705)
+    # cv2.line(erosion,(0,up_limit),(w,up_limit),(255,255,255),5)
+    # cv2.line(erosion,(0,down_limit),(w,down_limit),(255,255,255),5)
+    img[up_limit:down_limit, 0:w] = 0
+
+    # Count which part has more positive values
+    top_positive_values = cv2.countNonZero(img[0:up_limit, 0:w])
+    bottom_positive_values = cv2.countNonZero(img[down_limit:h, 0:w])
+    if top_positive_values > bottom_positive_values:
+        img[down_limit:h, 0:w] = 0
+    else:
+        img[0:up_limit, 0:w] = 0
+
+    return img
 
 
 def remove_isolated_pixels(image, threshold):
@@ -117,6 +116,7 @@ def remove_isolated_pixels(image, threshold):
             new_image[labels == label] = 0
 
     return new_image
+
 
 def bbox_iou(bboxA, bboxB):
     # compute the intersection over union of two bboxes
@@ -139,22 +139,32 @@ def bbox_iou(bboxA, bboxB):
 
     iou = interArea / float(bboxAArea + bboxBArea - interArea)
 
-    # return the intersection over union value
     return iou
 
-def compute_iou(candidates, annotations):
 
+def compute_mean_iou(candidates, annotations):
+
+    mean_iou = 0
     TP = 0
     FP = 0
+
     for n, candidate in enumerate(candidates):
         annotation = annotations[n]
+        mean_iou += bbox_iou(candidate, annotation)
+
+        #print("{} --- {}".format(n, bbox_iou(candidate, annotation)))
+
         if bbox_iou(candidate, annotation) > 0.5:
             TP += 1
-            #print("{}: TRUE".format(n))
+            # print("{}: TRUE".format(n))
         else:
             FP += 1
-            #print("{}: FALSE --------------------------------------------".format(n))
+            # print("{}: FALSE --------------------------------------------".format(n))
+
+    mean_iou = mean_iou / len(annotations)
+
 
     FN = len(annotations) - TP - FP
+    # print("TP:{}    FN={}   FP={}".format(TP, FN, FP))
 
-    return TP, FN, FP
+    return mean_iou
