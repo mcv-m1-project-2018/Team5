@@ -256,7 +256,7 @@ Steps for implementing RSift:
 (kp1, des1) = rsift(img1)
 (kp2, des2) = rsift(img2)
 
-result = match_kpt_rsift(des1, des2, 20, 0.02) ---> (True / False)
+result = compute_rsift_descriptor(des1, des2, 20, 0.02) ---> (True / False)
 '''
 
 def rsift(image, eps=1e-7):
@@ -331,7 +331,6 @@ def exclude_kps(kps, descs, bbox_text):
 
         if kr < ri or kr > rf or kc < ci or kc > cf:
             valid_descs.append(descs[i])
-
 
     return np.array(valid_descs)
 

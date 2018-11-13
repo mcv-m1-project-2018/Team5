@@ -30,17 +30,19 @@ PICKLE_QUERY_DATASET = 'train_query.pkl'
 K = 10
 COLOR_SPACE_LIST = ['rgb']
 FEATURES = {
-    #'orb': feat.orb,
+    'orb': feat.orb,
+    'rsift': feat.rsift,
     # 'sift': feat.sift,
     # 'surf': feat.surf,
     # 'hog': feat.hog,
-    'rsift': feat.rsift
+
 }
 
-orb_values = [(10, 1000), (20, 1100)]
+orb_values = [(10, 900),(20, 1100)]
+rsift_values = [(10, 0.04), (15, 0.06)]
+
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
-rsift_values = [(20, 0.03),(20, 0.035),(20, 0.04),(20, 0.045)]
 
 # Logger setup
 logging.basicConfig(
@@ -67,7 +69,6 @@ if __name__ == '__main__':
 
         # Sort bboxes
         candidates.sort(key=lambda x: x[0])
-        #print(candidates)
         candidates = [x[1] for x in candidates]
 
         # Read groundtruth

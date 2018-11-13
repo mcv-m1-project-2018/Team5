@@ -276,13 +276,16 @@ def create_db(imgs_dir, FEATURES, text_bboxes=list(), query=False):
         data = dict()
 
         img = get_img(imgs_dir, f)
-        # img = resize(img)
 
         # Compute the different feature descriptors for the image
         if not query:
+            text_bbox = text_bboxes[get_number_from_filename(f)]
+            # IDEA: draw black rectangle on text area
+            cv2.rectangle(img, (text_bbox[0], text_bbox[1]), (text_bbox[2], text_bbox[3]), (0, 0, 0), -1)
+
             for feat_name, feat_func in FEATURES.items():
                 temp_keypoints = feat_func(img)
-                data[feat_name] = feat.exclude_kps(temp_keypoints[0], temp_keypoints[1], text_bboxes[get_number_from_filename(f)])
+                data[feat_name] = feat.exclude_kps(temp_keypoints[0], temp_keypoints[1], text_bbox)
 
         else:
             for feat_name, feat_func in FEATURES.items():
