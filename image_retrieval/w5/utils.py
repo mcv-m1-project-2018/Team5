@@ -496,18 +496,27 @@ def contour_to_polygon(contour):
     return np.array(polygon)
 
 
-def get_angles(polygon, k=2):
+def get_angles(polygon):
     """
     Return the k-primary angles of a polygon.
     :param polygon: Polygon
     :return: k-primary angles
     """
 
-    # Calculate the angle between each pair of points
-    angles = list(map(lambda p1, p2: np.arctan(np.abs((p2[1] - p1[1]) / (p2[0] - p1[0]))), polygon[:-1], polygon[1:]))
+    polygon = [p.tolist() for p in polygon]
+    polygon.append(polygon[0])
+    polygon = np.array(polygon)
 
-    # Group the angles into k clusters
-    return np.sort(vq.kmeans(angles, k)[0])
+    # Calculate the angle between each pair of points
+    angles = list(map(lambda x, y: np.arctan((y[1] - x[1]) / (y[0] - x[0])), polygon[:-1], polygon[1:]))
+
+    final_theta = angles[0] if abs(angles[0]) < np.pi / 4 else angles[1]
+    final_theta = abs(final_theta) if final_theta < 0 else np.pi - final_theta
+
+    final = angles[:2]
+    final.append(final_theta)
+
+    return final
 
 
 def rescale(point, scale_ini, scale_end):
@@ -520,3 +529,11 @@ def rescale(point, scale_ini, scale_end):
     """
 
     return (point * scale_end / scale_ini).astype(np.uint8)
+
+
+def rad2deg(angle):
+    return angle * 180 / np.pi
+
+
+def ged2rad(angle):
+    return angle * np.pi / 180

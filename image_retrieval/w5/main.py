@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
         # Detect contours in edged image
         _, cnts, __ = cv2.findContours(edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
+        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
         # Painting frame contour
         frame = None
@@ -176,14 +176,19 @@ if __name__ == '__main__':
         # Calculate convex hull of the frame
         frame = cv2.convexHull(frame)
 
+        # Get the rectangle with the min area
+        rect = cv2.minAreaRect(frame)
+        frame = cv2.boxPoints(rect)
+        frame = np.int0(frame)
+
         # Get the 2 main angles of the frame
-        angles = ut.get_angles(frame, k=2)
+        angles = ut.get_angles(frame)
 
         # As we scale the image, we need to scale back the contour to the original image
         frame_orig = list(map(lambda x: ut.rescale(x, size_ini, size_end), frame))
 
         # Save data to export
-        frames.append([angles[0], frame_orig[:-1]])
+        frames.append([ut.rad2deg(angles[-1]), frame_orig[:-1]])
 
     # Save the data in a pickle file
     ut.bbox_to_pkl(frames, fname='frames', folder='pkl')
