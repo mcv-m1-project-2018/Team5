@@ -14,7 +14,9 @@ import numpy as np
 import pickle
 import cv2
 
+from scipy.cluster import vq
 from skimage import color, exposure, transform
+
 
 # Local modules
 import features as feat
@@ -423,3 +425,98 @@ def plot_images(imgs):
 def get_number_from_filename(fname):
     return int(fname.split("_")[1].split(".")[0])
 
+
+def resize(image, width=None, height=None, inter=cv2.INTER_AREA):
+    """
+    Resize an image.
+    :param image: Numpy array representation of the image
+    :param width: Final width
+    :param height: Final height
+    :param inter: Interpolation method
+    :return: Resized image
+    """
+
+    h, w = image.shape[:2]
+
+    # If both the width and height are None, then return the original image
+    if width is None and height is None:
+        return image
+
+    # Check to see if the width is None
+    if width is None:
+        # Calculate the ratio of the height and construct the dimensions
+        r = height / float(h)
+        dim = (int(w * r), height)
+
+    # Otherwise, the height is None
+    else:
+        # Calculate the ratio of the width and construct the dimensions
+        r = width / float(w)
+        dim = (width, int(h * r))
+
+    # Resize the image
+    resized = cv2.resize(image, dim, interpolation=inter)
+
+    return resized
+
+
+def rotate(image, angle, center=None, scale=1.0):
+    """
+    Rotate an image.
+    :param image: Numpy array representation of the image
+    :param angle: Rotation angle
+    :param center: Center of rotation
+    :param scale: Final scale of the image
+    :return: Rotated image
+    """
+
+    h, w = image.shape[:2]
+
+    # If the center is None, initialize it as the center of the image
+    if center is None:
+        center = (w // 2, h // 2)
+
+    # Perform the rotation
+    m = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated = cv2.warpAffine(image, m, (w, h))
+
+    # Return the rotated image
+    return rotated
+
+
+def contour_to_polygon(contour):
+    """
+    Convert contour returned from `findContours` openCV function into a polygon
+    :param contour: Contour object
+    :return: Polygon
+    """
+
+    polygon = [p[0].tolist() for p in contour]
+    polygon.append(polygon[0])
+    return np.array(polygon)
+
+
+def get_angles(polygon, k=2):
+    """
+    Return the k-primary angles of a polygon.
+    :param polygon: Polygon
+    :return: k-primary angles
+    """
+
+    # Calculate the angle between each pair of points
+    angles = list(map(lambda p1, p2: np.arctan(np.abs((p2[1] - p1[1]) / (p2[0] - p1[0]))), polygon[:-1], polygon[1:]))
+
+    # Group the angles into k clusters
+    return np.sort(vq.kmeans(angles, k)[0])
+
+
+def rescale(point, scale_ini, scale_end):
+    """
+    Rescale a poing.
+    :param point: Point
+    :param scale_ini: Initial scale
+    :param scale_end: Final scale
+    :return: Scaled point
+    """
+
+    return (point * scale_end / scale_ini).astype(np.uint8)

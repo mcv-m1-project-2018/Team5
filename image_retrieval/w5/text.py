@@ -11,11 +11,9 @@ def get_text_area(img, image_name):
     :param img: color image read with openCV
     :return:
     """
-
-
-#for path_image in glob.glob("dataset/w5_BBDD_random/*.jpg"):
- #   image_name = path_image.split("/")[-1]
-  #  print(image_name)
+    #for path_image in glob.glob("dataset/w5_BBDD_random/*.jpg"):
+    #   image_name = path_image.split("/")[-1]
+    #  print(image_name)
 
     # Read image
     #img = cv2.imread(path_image, cv2.IMREAD_GRAYSCALE)
@@ -39,7 +37,7 @@ def get_text_area(img, image_name):
     mask = np.zeros((h + 2, w + 2), np.uint8)
 
     # Floodfill from point (0, 0)
-    cv2.floodFill(im_floodfill, mask, (0, 0), 255);
+    cv2.floodFill(im_floodfill, mask, (0, 0), 255)
 
     # Invert floodfilled image
     im_floodfill_inv = cv2.bitwise_not(im_floodfill)
@@ -98,7 +96,7 @@ def get_text_area(img, image_name):
     # fig.savefig("adsf.png")
 
     cv2.imwrite('pruebas_9/' + image_name + '.png', im_floodfill_inv)
-    return (x-15, y-10, x+w+15, y+h+10)
+    return x - 15, y - 10, x + w + 15, y + h + 10
 
 
 def remove_isolated_pixels(image, threshold):
@@ -117,6 +115,7 @@ def remove_isolated_pixels(image, threshold):
             new_image[labels == label] = 0
 
     return new_image
+
 
 def bbox_iou(bboxA, bboxB):
     # compute the intersection over union of two bboxes
@@ -142,8 +141,8 @@ def bbox_iou(bboxA, bboxB):
     # return the intersection over union value
     return iou
 
-def compute_iou(candidates, annotations):
 
+def compute_iou(candidates, annotations):
     TP = 0
     FP = 0
     for n, candidate in enumerate(candidates):
