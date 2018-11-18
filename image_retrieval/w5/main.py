@@ -38,24 +38,23 @@ orb_values = [(10, 900),(20, 1100)]
 rsift_values = [(10, 0.04), (15, 0.06)]
 sift_values = [(0.4, 20), (0.4, 15)]
 surf_values = [(0.5, 100), (0.4, 50)]
-rsift_values = [(20, 0.03), (20, 0.035), (20, 0.04), (20, 0.045)]
 
 # TODO: COMENTAR SI NO ANDA
 FEATURES = {
     'orb': {
-        'values': [(10, 1000), (20, 1100)],
+        'values': [(10, 550)],
         'func': feat.compute_orb_descriptors,
     },
-    'sift': {
-        'values': [(0.4, 20), (0.4, 15)],
-        'func': feat.compute_sift_descriptor,
-    },
-    'surf': {
-        'values': [(0.5, 100), (0.4, 50)],
-        'func': feat.compute_surf_descriptor,
-    },
+    # 'sift': {
+    #     'values': [(0.4, 20), (0.4, 15)],
+    #     'func': feat.compute_sift_descriptor,
+    # },
+    # 'surf': {
+    #     'values': [(0.5, 100), (0.4, 50)],
+    #     'func': feat.compute_surf_descriptor,
+    # },
     'rsift': {
-        'values': [(20, 0.03), (20, 0.035), (20, 0.04), (20, 0.045)],
+        'values': [(10, 0.04)],
         'func': feat.compute_rsift_descriptor,
     }
 }
@@ -109,16 +108,16 @@ if __name__ == '__main__':
     # Rescale the images to this width
     width = 512
     # Iterate over query images
-    for img_fname in ut.get_files_from_dir(TRAIN_QUERY_DIR, excl_ext=['DS_Store']):
+    for img_fname in sorted(ut.get_files_from_dir(TRAIN_QUERY_DIR, excl_ext=['DS_Store'])):
         # Read image
         img = cv2.imread(os.path.join(TRAIN_QUERY_DIR, img_fname))
 
         # We are going to resize the image, so we need to keep track of the initial scale
-        size_ini = img.shape
+        size_ini = img.shape[:2]
         # Resize the image
         img = ut.resize(img, width=width)
         # Save the final shape of the image
-        size_end = img.shape
+        size_end = img.shape[:2]
         # Copy
         color = img.copy()
 
@@ -184,11 +183,16 @@ if __name__ == '__main__':
         # Get the 2 main angles of the frame
         angles = ut.get_angles(frame)
 
+        rect2 = (rect[0], rect[1], angles[-1])
+        img_croped = ut.crop_min_area_rect(color, rect2)
+        cv2.imshow("Cropped", img_croped)
+        cv2.waitKey(0)
+
         # As we scale the image, we need to scale back the contour to the original image
         frame_orig = list(map(lambda x: ut.rescale(x, size_ini, size_end), frame))
 
         # Save data to export
-        frames.append([ut.rad2deg(angles[-1]), frame_orig[:-1]])
+        frames.append([ut.rad2deg(angles[-1]), frame_orig])
 
     # Save the data in a pickle file
     ut.bbox_to_pkl(frames, fname='frames', folder='pkl')
